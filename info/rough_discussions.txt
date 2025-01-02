@@ -1,0 +1,295 @@
+**Overview**
+
+The project focuses on developing SmartInvoice, a comprehensive invoicing tool within the GTCO Merchant Academy toolkit. This tool will streamline invoice creation, management, and payment processing for small and medium-sized enterprises (SMEs) in Nigeria. The system will integrate with GTCO's payment infrastructure 
+
+**Pages and features**
+
+**Authentication pages:**
+
+sign up with email and password
+
+sign in with email and password
+
+google sign in
+
+apple sign in
+
+forgot password feature (witht the same auth provider)
+
+**Onboarding pages (2 pages):**
+
+1st onboarding page accepts details of the user:
+
+first name, last name, location(country), phone number, then survey question: where did you hear about us?
+
+2nd onboarding page accepts info of the company:
+  - company name
+
+- company description
+- company logo
+
+*here perhaps we create the user entity & perhaps the company entity. *we also need to implement the image storage feature…options are cloudinary, or perhaps supabase storage still?
+
+**Dashboard Page**
+Overview
+
+Summary of all information on payments and invoices in selected timeframes:
+
+- Last day
+- Last week
+- Last 2 weeks
+- Last month
+- Last 6 months
+- Last 9 months
+
+*using a barchart, few things to note:
+*bar chart animations on each timeframe toogle
+
+Invoice donut chart
+
+*similar timeframes with the bar chart payments overview
+
+3 different status - Paid, Unpaid, Overdue - with different colors…also there’s a toogle button that shows just one status, two or All.
+
+Top Paying client
+
+which should fetch a list of top paying clients and how much they have paid. can be 5 initially
+
+I feel this is straight forward as this should 
+
+Top Paying Product
+
+which should fetch a list of top paying products and how much total revenue they have created
+
+(i.e in which their invoices have been paid
+
+*Does this imply that each invoice should consist of all the product ids in the incoice & how how much the product cost & the SKU?
+
+Activity Component
+
+should show a list of all the activities and when it was done. types of activities should include:
+
+invoice_generated, product_created, invoice_sent, client_created (*we should think up other things)
+
+**Invoice Pages**
+
+1. **Create Invoice Page**
+
+we would accept the following invoice details:
+
+1. Bill to customer (i.e the customer we are billing to) : Should be a dropdown with search so that we can pick from the list of customers.
+2. Invoice Number - which should be automatically generated(after the previous one). it should appear in the UI as non editable text in textfield.
+3. Due Date - when the invoice is due to be paid. if the due date passes and the invoice still hasn’t been paid the invoice payment status should change to overdue. It should be optional and the ui should be a date-time component.
+4. Address of customer - should be automaticaaly field up once the client has been selected from the dropdowns.
+5. should be selectable from a pre-defined currencies (probably a a list of currency entities that is pre-seeded)
+6. Products - the list of products and their skus to be added to invoice… the component should allow us to add multiple products and define the number/SKU for each.
+*we can also have a shortcut to create new product in this component.
+
+1. **Invoices Page**
+    
+    Components:
+    
+    1. Drafted Amount - Component that show the total drafted invoices amount. This means that we should have a draft invoice feature.
+    2. Overdue Amount - Total amount for overdue invoices.
+    3. Number of sent invoices today - total number of invoices that have been sent out today
+    4. then the list of all the invoices (paginated) with the columns Invoice ID, Customer, Date, Total, Status
+
+   * schedule invoice feature
+
+   * save invoice as draft feature
+
+   * be able to query with multiple filters such as date time, invoice status, customer name.
+
+   * be able to search via Invoice ID.
+
+   * be able to order invoice lists based on the newest first, due date, invoice status.
+
+1. **Current Invoice Page**
+
+Be able to fetch all the info of the particular user.
+
+Be able to mark the payment status of the invoice as paid (from unpaid) (this should introduce a new instance of payment/transaction entity)
+
+on Payments, there are 2 scenarios:
+
+when merchant sends invoice to client it sends the the client email and the email consists of 
+
+1. the generated invoice pdf
+2. the link to complete the payment (takes them to a complete payment portal) powered by paystack or GTCO’s squad. 
+
+Then when the client completes the payment then webhook will notify us and we will:
+
+1. generate a new instance of transaction (payment model)
+2. move the invoice instance payment status from unpaid to paid…also tie it to the  transaction.
+
+But there is another case where the client might not complete payment via that webhook, and in this case we want the client to manually update the payment status via a simple button . in this case the transaction model is still created(only that the model will not have a paystack reference or something like that)
+
+**Client Pages**
+
+Create Client
+
+New client with the ffg information:
+
+- first name, last name, email, phone number, mobile number, address
+
+Current Client Page
+
+should contain all the above info in create client
+
+Aside from the above info, we should also be able to fetch the following:
+
+- Total Overdue Amount: If an invoice has been sent or assigned to this client and he hasnt paid the amount to be paid is added to his total overdue amount
+
+- Total Drafted Amount: If an invoice has been drafted for this client and it hassnt been sent yet the amount is added to his total Drafted amount
+
+- Total Generated Amount: The total amount this client has generated or paid.
+
+-List of invoices sent to this client. should fetch all invoices pertaining to this client ( similar to how invoices are fetched in invoices page)
+
+-Edit client details
+
+-Delete client
+
+**Product Pages**
+
+All Product Pages
+
+*note: we can’t just delete a product esp. if the product has invoices already. The system should prevent us from doing so.
+
+This page should provide a list of products with the following:
+
+- product id
+- product name
+- price
+- image
+- quantity
+- additional description
+
+*we should also have the following functionalities on this page :
+-  Search product with ID or name
+
+-Order by date_created, date_updated
+
+-delete product
+
+-edit product details such as price description. do not allow name edit.
+
+*front end should also notify merchant should check product name properly as that might be difficult to change later on.
+
+Current Product Page
+
+should contain the normal info as above.
+in addition it should also contain the list of invoices in which the product appears in. i.e:
+The list of invoices which contain at least one sku of that particular product. Filters such as quantity, amount can be applied as well.
+
+Additional opinions
+
+- We would have a invoice model
+- we would have a transaction model
+
+**Questions**
+
+1. how do we handle the survey questions?
+2. should we have a simple user model & have RBAC to handle the different types:
+    
+    Merchant/Admin, Sales Manager(which can be added by the Merchant in order to manage the app), and lastly client
+    
+    or should we split all these into separate models?
+    
+
+1. should the company model be created separately?
+2. we should probably have another entity(model) called activity which new instances are created at the specific pre-defined intervals?
+
+Alright, let's dive into this SmartInvoice project. The scope is pretty comprehensive, covering everything from authentication to detailed reporting. First off, the authentication pages look solid with multiple sign-in options, which is great for user convenience. I like the two-step onboarding process—collecting both user and company info right off the bat will set a strong foundation.
+
+Now, for the schema, it seems like we're dealing with several key entities: Users, Companies, Clients, Invoices, Products, Transactions, and Activities. It's crucial to define these clearly. For instance, Users and Clients might have overlapping fields, so maybe a single User model with roles could work, but we need to be careful to avoid confusion.
+
+The dashboard is packed with useful features—bar charts for payment summaries, donut charts for invoice statuses, and top-paying clients and products. The activity component will help keep track of important actions. I'm thinking about how to manage data efficiently, especially with paginated lists and filtering options for invoices.
+
+Invoices themselves have a lot of moving parts. Auto-generating invoice numbers and managing due dates with status changes are essential. Integrating payment processing with Paystack or GTCO’s system will be key, and handling both automatic and manual payment updates needs to be seamless.
+
+Clients and products also need robust management features. Ensuring that products can't be deleted if they're linked to invoices is a good safeguard. The relationships between these entities need to be well-defined to prevent data integrity issues.
+
+Storage for images, like company logos and product images, should be handled efficiently. Cloudinary or Supabase storage are both solid options, and choosing one will depend on specific needs like cost and integration ease.
+
+Regarding the models, having separate models for User, Company, Client, Invoice, Product, Transaction, and Activity makes sense. For roles, a Role-Based Access Control system could simplify managing different user types without complicating the models.
+
+As for the survey questions during onboarding, maybe a simple survey model that links to the user could work. It shouldn't add too much complexity but provide valuable feedback.
+
+Overall, the project is well thought out. The next steps should focus on refining the models, ensuring all relationships and constraints are correctly set up, and planning the API endpoints carefully. Also, thinking about scalability and security early on will pay off in the long run.
+
+
+Overall Thoughts
+Your project, SmartInvoice, is a comprehensive invoicing tool that aims to streamline invoice creation, management, and payment processing for SMEs in Nigeria. The features you've outlined are well thought out and cover a wide range of functionalities that would be valuable for users. However, there are several aspects to consider and discuss in more detail.
+
+Entities and Schema Observations
+User and Company Entities:
+
+User: This should include personal details like first name, last name, email, phone number, and authentication details.
+
+Company: This should include company name, description, logo, and possibly a relationship to the user (e.g., one user can own one company).
+
+Client: This should be a separate entity from the user, as clients are likely to be different from the users who create invoices.
+
+Product: This should include product details like name, price, SKU, description, and image.
+
+Invoice: This should include invoice details like invoice number, due date, status, products, and a relationship to the client and company.
+
+Transaction: This should include payment details like amount, payment status, payment method, and a relationship to the invoice.
+
+Activity Entity:
+
+An Activity entity could be useful to log actions like "invoice_generated," "product_created," etc. This could be a generic entity that captures various actions performed by users.
+
+Survey Questions:
+
+You could create a SurveyResponse entity to store the responses to the survey question "where did you hear about us?" This way, you can analyze the data later.
+
+Role-Based Access Control (RBAC):
+
+You should consider implementing RBAC to handle different user roles like Merchant/Admin, Sales Manager, and Client. This could be achieved by adding a role field to the User entity.
+
+Company Model:
+
+Yes, the company model should be created separately. This allows for easier management of multiple companies (if that's a feature you plan to add in the future).
+
+Activity Entity:
+
+Yes, having an Activity entity that records specific actions (e.g., invoice generated, product created) could be beneficial for logging and auditing purposes.
+
+Feature Observations
+Authentication:
+
+You've covered the basics, but you might want to consider adding social login options beyond Google and Apple, depending on your target audience.
+
+Two-factor authentication (2FA) could be a valuable addition for security.
+
+Onboarding:
+
+The two-step onboarding process seems reasonable. However, you might want to consider making the company onboarding optional or allowing users to skip it and complete it later.
+
+For image storage, both Cloudinary and Supabase Storage are good options. Cloudinary is more feature-rich, while Supabase Storage is integrated with Supabase's other services. Consider your needs and costs.
+
+Dashboard:
+
+The dashboard features are comprehensive. However, you might want to consider adding more interactive elements, such as drill-down capabilities for the bar charts and donut charts.
+
+The activity component could be enhanced by adding filters (e.g., by date, by action type).
+
+Invoices:
+
+The invoice features are well thought out. However, you might want to consider adding support for recurring invoices and customizable templates.
+
+The ability to export invoices as PDFs or other formats could be a valuable addition.
+
+Clients:
+
+The client management features are good, but you might want to consider adding support for client groups or categories.
+
+You could also add a feature to send reminders to clients for overdue invoices.
+
+Products:
+
+The product management features are solid. However, you might want to consider adding support for product categories and variants.
+
+The restriction on deleting products that are linked to invoices is a good idea. You could also consider archiving products instead of deleting them.
