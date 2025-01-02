@@ -54,4 +54,34 @@ export class AuthService {
       access_token: this.jwtService.sign(payload),
     };
   }
+
+  async forgotPassword(email: string) {
+    const { data, error } = await this.supabase.auth.resetPasswordForEmail(
+      email,
+      {
+        redirectTo: this.configService.get<string>('PASSWORD_RESET_URL'),
+      },
+    );
+
+    if (error) throw new Error(error.message);
+    return data;
+  }
+
+  async signInWithGoogle() {
+    const { data, error } = await this.supabase.auth.signInWithOAuth({
+      provider: 'google',
+    });
+
+    if (error) throw new Error(error.message);
+    return data;
+  }
+
+  async signInWithApple() {
+    const { data, error } = await this.supabase.auth.signInWithOAuth({
+      provider: 'apple',
+    });
+
+    if (error) throw new Error(error.message);
+    return data;
+  }
 }
