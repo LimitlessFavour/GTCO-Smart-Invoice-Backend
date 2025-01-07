@@ -6,6 +6,8 @@ import {
   Req,
   Res,
   HttpStatus,
+  Get,
+  Query,
 } from '@nestjs/common';
 import {
   ApiTags,
@@ -25,6 +27,7 @@ import {
   OAuthResponseDto,
   ForgotPasswordResponseDto,
 } from './dto/response.dto';
+import { ForgotPasswordDto } from './dto/forgot-password.dto';
 
 @ApiTags('Auth')
 @Controller('auth')
@@ -113,8 +116,16 @@ export class AuthController {
     type: ForgotPasswordResponseDto,
   })
   @ApiResponse({ status: HttpStatus.BAD_REQUEST, description: 'Invalid email' })
-  async forgotPassword(@Body('email') email: string) {
-    await this.authService.forgotPassword(email);
-    return { message: 'Password reset email sent successfully' };
+  @ApiBody({ type: ForgotPasswordDto })
+  async forgotPassword(@Body() forgotPasswordDto: ForgotPasswordDto) {
+    return this.authService.forgotPassword(forgotPasswordDto.email);
+  }
+
+  @Get('verify')
+  @ApiOperation({ summary: 'Verify email address' })
+  @ApiResponse({ status: 200, description: 'Email verified successfully' })
+  @ApiResponse({ status: 400, description: 'Invalid or expired token' })
+  async verifyEmail(@Query('token') token: string) {
+    return this.authService.verifyEmail(token);
   }
 }

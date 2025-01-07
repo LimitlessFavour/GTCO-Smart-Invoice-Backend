@@ -5,7 +5,12 @@ export class UpdateClientDto {
   @ApiProperty({ required: false })
   @IsString()
   @IsOptional()
-  name?: string;
+  firstName?: string;
+
+  @ApiProperty({ required: false })
+  @IsString()
+  @IsOptional()
+  lastName?: string;
 
   @ApiProperty({ required: false })
   @IsEmail()
@@ -15,5 +20,15 @@ export class UpdateClientDto {
   @ApiProperty({ required: false })
   @IsString()
   @IsOptional()
-  phone?: string;
+  phoneNumber?: string;
+
+  @ApiProperty({ required: false })
+  @IsString()
+  @IsOptional()
+  mobileNumber?: string;
+
+  @ApiProperty({ required: false })
+  @IsString()
+  @IsOptional()
+  address?: string;
 }

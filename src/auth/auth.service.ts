@@ -13,10 +13,12 @@ import { JwtService } from '@nestjs/jwt';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { User } from '../user/user.entity';
+import { Logger } from '@nestjs/common';
 
 @Injectable()
 export class AuthService {
   private supabase: SupabaseClient;
+  private readonly logger = new Logger(AuthService.name);
 
   constructor(
     private configService: ConfigService,
@@ -44,6 +46,7 @@ export class AuthService {
               message: 'Invalid email or password',
               statusCode: 401,
             });
+          //TODO: Comment out or remove this case temporarily
           case 'Email not confirmed':
             throw new UnauthorizedException({
               message: 'Please verify your email before logging in',
@@ -136,6 +139,7 @@ export class AuthService {
           id: data.user.id,
           email: data.user.email,
         },
+        message: 'Please check your email for verification instructions',
       };
     } catch (error) {
       if (
@@ -155,13 +159,20 @@ export class AuthService {
 
   async forgotPassword(email: string) {
     try {
+      this.logger.debug(`Attempting to send password reset email to: ${email}`);
+
       const { error } = await this.supabase.auth.resetPasswordForEmail(email, {
-        redirectTo: this.configService.get<string>('PASSWORD_RESET_URL'),
+        redirectTo: `${this.configService.get<string>('FRONTEND_URL')}/auth/reset-password`,
       });
 
       if (error) {
+        this.logger.error(
+          `Failed to send password reset email: ${error.message}`,
+          error.stack,
+          'forgotPassword',
+        );
         throw new BadRequestException({
-          message: 'Failed to send password reset email',
+          message: 'Failed to send password reset email: ' + error.message,
           statusCode: 400,
         });
       }
@@ -171,11 +182,16 @@ export class AuthService {
         statusCode: 200,
       };
     } catch (error) {
+      this.logger.error(
+        'Password reset error',
+        error?.stack || 'No stack trace',
+        'forgotPassword',
+      );
+
       if (error instanceof BadRequestException) {
         throw error;
       }
 
-      console.error('Password reset error:', error);
       throw new InternalServerErrorException({
         message: 'An unexpected error occurred',
         statusCode: 500,
@@ -238,6 +254,36 @@ export class AuthService {
       console.error('Apple auth error:', error);
       throw new InternalServerErrorException({
         message: 'An unexpected error occurred',
+        statusCode: 500,
+      });
+    }
+  }
+
+  async verifyEmail(token: string) {
+    try {
+      const { error } = await this.supabase.auth.verifyOtp({
+        token_hash: token,
+        type: 'email',
+      });
+
+      if (error) {
+        throw new BadRequestException({
+          message: 'Invalid or expired verification token',
+          statusCode: 400,
+        });
+      }
+
+      return {
+        message: 'Email verified successfully',
+        statusCode: 200,
+      };
+    } catch (error) {
+      if (error instanceof BadRequestException) {
+        throw error;
+      }
+
+      throw new InternalServerErrorException({
+        message: 'Failed to verify email',
         statusCode: 500,
       });
     }
