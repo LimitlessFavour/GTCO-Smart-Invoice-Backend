@@ -7,7 +7,6 @@ import {
   Res,
   HttpStatus,
 } from '@nestjs/common';
-
 import {
   ApiTags,
   ApiOperation,
@@ -19,6 +18,13 @@ import { AuthService } from './auth.service';
 import { LoginDto } from './dto/login.dto';
 import { SignupDto } from './dto/signup.dto';
 import { JwtAuthGuard } from './guards/jwt-auth.guard';
+import {
+  //   LoginResponseDto,
+  SignupResponseDto,
+  ValidateTokenResponseDto,
+  OAuthResponseDto,
+  ForgotPasswordResponseDto,
+} from './dto/response.dto';
 
 @ApiTags('Auth')
 @Controller('auth')
@@ -27,17 +33,13 @@ export class AuthController {
 
   @Post('login')
   @ApiOperation({ summary: 'Login a user' })
-  @ApiResponse({
-    status: HttpStatus.OK,
-    description: 'User logged in successfully',
-  })
-  @ApiResponse({
-    status: HttpStatus.UNAUTHORIZED,
-    description: 'Invalid credentials',
-  })
+  @ApiResponse({ status: 200, description: 'Login successful' })
+  @ApiResponse({ status: 401, description: 'Invalid credentials' })
+  @ApiResponse({ status: 400, description: 'Bad request' })
   @ApiBody({ type: LoginDto })
   async login(@Body() loginDto: LoginDto) {
-    return this.authService.login(loginDto);
+    const access_token = await this.authService.login(loginDto);
+    return { access_token, message: 'Login successful' };
   }
 
   @Post('signup')
@@ -45,11 +47,13 @@ export class AuthController {
   @ApiResponse({
     status: HttpStatus.CREATED,
     description: 'User registered successfully',
+    type: SignupResponseDto,
   })
   @ApiResponse({ status: HttpStatus.BAD_REQUEST, description: 'Invalid input' })
   @ApiBody({ type: SignupDto })
   async signup(@Body() signupDto: SignupDto) {
-    return this.authService.signup(signupDto);
+    const access_token = await this.authService.signup(signupDto);
+    return { access_token, message: 'User registered successfully' };
   }
 
   @Post('validate')
@@ -59,13 +63,14 @@ export class AuthController {
   @ApiResponse({
     status: HttpStatus.OK,
     description: 'Token is valid',
+    type: ValidateTokenResponseDto,
   })
   @ApiResponse({
     status: HttpStatus.UNAUTHORIZED,
     description: 'Invalid token',
   })
   async validateToken(@Req() req: any) {
-    return { user: req.user };
+    return { user: req.user, message: 'Token is valid' };
   }
 
   @Post('google')
@@ -73,6 +78,7 @@ export class AuthController {
   @ApiResponse({
     status: HttpStatus.OK,
     description: 'Google OAuth URL generated successfully',
+    type: OAuthResponseDto,
   })
   @ApiResponse({
     status: HttpStatus.BAD_REQUEST,
@@ -80,7 +86,7 @@ export class AuthController {
   })
   async signInWithGoogle(@Req() req: any, @Res() res: any) {
     const data = await this.authService.signInWithGoogle();
-    res.redirect(data.url); // Redirect to Google OAuth URL
+    res.redirect(data.url);
   }
 
   @Post('apple')
@@ -88,6 +94,7 @@ export class AuthController {
   @ApiResponse({
     status: HttpStatus.OK,
     description: 'Apple OAuth URL generated successfully',
+    type: OAuthResponseDto,
   })
   @ApiResponse({
     status: HttpStatus.BAD_REQUEST,
@@ -95,6 +102,19 @@ export class AuthController {
   })
   async signInWithApple(@Req() req: any, @Res() res: any) {
     const data = await this.authService.signInWithApple();
-    res.redirect(data.url); // Redirect to Apple OAuth URL
+    res.redirect(data.url);
+  }
+
+  @Post('forgot-password')
+  @ApiOperation({ summary: 'Request a password reset' })
+  @ApiResponse({
+    status: HttpStatus.OK,
+    description: 'Password reset email sent successfully',
+    type: ForgotPasswordResponseDto,
+  })
+  @ApiResponse({ status: HttpStatus.BAD_REQUEST, description: 'Invalid email' })
+  async forgotPassword(@Body('email') email: string) {
+    await this.authService.forgotPassword(email);
+    return { message: 'Password reset email sent successfully' };
   }
 }

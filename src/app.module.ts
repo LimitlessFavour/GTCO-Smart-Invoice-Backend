@@ -10,9 +10,41 @@ import { TransactionModule } from './transaction/transaction.module';
 import { ActivityModule } from './activity/activity.module';
 import { SurveyResponseModule } from './survey-response/survey-response.module';
 import { AuthModule } from './auth/auth.module';
+import { TypeOrmModule } from '@nestjs/typeorm';
+import { Invoice } from './invoice/invoice.entity';
+import { InvoiceItem } from './invoice/invoice-item.entity';
+import { Product } from './product/product.entity';
+import { Company } from './company/company.entity';
+import { Client } from './client/client.entity';
+import { User } from './user/user.entity';
+import { Activity } from './activity/activity.entity';
+import { SurveyResponse } from './survey-response/survey-response.entity';
+import { ConfigModule } from '@nestjs/config';
 
 @Module({
   imports: [
+    ConfigModule.forRoot({
+      isGlobal: true,
+    }),
+    TypeOrmModule.forRoot({
+      type: 'postgres',
+      host: 'localhost',
+      port: 5432,
+      username: 'postgres',
+      password: 'postgres',
+      database: 'smartinvoice',
+      entities: [
+        Invoice,
+        InvoiceItem,
+        Product,
+        Company,
+        Client,
+        User,
+        Activity,
+        SurveyResponse,
+      ],
+      synchronize: true,
+    }),
     ClientModule,
     UserModule,
     CompanyModule,
