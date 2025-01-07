@@ -19,7 +19,7 @@ import { LoginDto } from './dto/login.dto';
 import { SignupDto } from './dto/signup.dto';
 import { JwtAuthGuard } from './guards/jwt-auth.guard';
 import {
-  LoginResponseDto,
+  //   LoginResponseDto,
   SignupResponseDto,
   ValidateTokenResponseDto,
   OAuthResponseDto,
@@ -33,15 +33,9 @@ export class AuthController {
 
   @Post('login')
   @ApiOperation({ summary: 'Login a user' })
-  @ApiResponse({
-    status: HttpStatus.OK,
-    description: 'User logged in successfully',
-    type: LoginResponseDto,
-  })
-  @ApiResponse({
-    status: HttpStatus.UNAUTHORIZED,
-    description: 'Invalid credentials',
-  })
+  @ApiResponse({ status: 200, description: 'Login successful' })
+  @ApiResponse({ status: 401, description: 'Invalid credentials' })
+  @ApiResponse({ status: 400, description: 'Bad request' })
   @ApiBody({ type: LoginDto })
   async login(@Body() loginDto: LoginDto) {
     const access_token = await this.authService.login(loginDto);

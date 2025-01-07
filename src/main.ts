@@ -10,11 +10,17 @@ async function bootstrap() {
 
   // Swagger configuration
   const config = new DocumentBuilder()
-    .setTitle('SmartInvoice API')
-    .setDescription('API documentation for the SmartInvoice application')
+    .setTitle('GTCO Smart Invoice API')
+    .setDescription('API documentation for GTCO Smart Invoice')
     .setVersion('1.0')
-    .addBearerAuth()
     .addTag('Schema', 'API Schema operations')
+    .addTag('Auth', '1')
+    .addTag('User', '2')
+    .addTag('Client', '3')
+    .addTag('Invoice', '4')
+    .addTag('Product', '5')
+    .addTag('Company', '6')
+    .addBearerAuth()
     .build();
 
   const document = SwaggerModule.createDocument(app, config);

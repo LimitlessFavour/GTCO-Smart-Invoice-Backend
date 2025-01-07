@@ -1,0 +1,133 @@
+**SmartInvoice Database Schema**
+
+---
+
+### Tables and Fields
+
+1. **User**
+    - `user_id` (int, primary key)
+    - `first_name` (string)
+    - `last_name` (string)
+    - `email` (string, unique)
+    - `password` (string, hashed)
+    - `phone_number` (string)
+    - `role` (string, e.g., admin, sales_manager)
+    - `created_at` (timestamp)
+    - `updated_at` (timestamp)
+2. **Company**
+    - `company_id` (int, primary key)
+    - `user_id` (int, foreign key to User)
+    - `company_name` (string)
+    - `description` (text)
+    - `logo` (string, URL or file path)
+    - `created_at` (timestamp)
+    - `updated_at` (timestamp)
+3. **Client**
+    - `client_id` (int, primary key)
+    - `company_id` (int, foreign key to Company)
+    - `first_name` (string)
+    - `last_name` (string)
+    - `email` (string)
+    - `phone_number` (string)
+    - `address` (text)
+    - `created_at` (timestamp)
+    - `updated_at` (timestamp)
+4. **Product**
+    - `product_id` (int, primary key)
+    - `company_id` (int, foreign key to Company)
+    - `product_name` (string)
+    - `description` (text)
+    - `price` (decimal)
+    - `sku` (string, unique)
+    - `image` (string, URL or file path)
+    - `created_at` (timestamp)
+    - `updated_at` (timestamp)
+5. **Invoice**
+    - `invoice_id` (int, primary key)
+    - `company_id` (int, foreign key to Company)
+    - `client_id` (int, foreign key to Client)
+    - `invoice_number` (string, unique)
+    - `due_date` (date)
+    - `status` (string, e.g., unpaid, paid, overdue)
+    - `total_amount` (decimal)
+    - `created_at` (timestamp)
+    - `updated_at` (timestamp)
+6. **InvoiceItem**
+    - `invoice_item_id` (int, primary key)
+    - `invoice_id` (int, foreign key to Invoice)
+    - `product_id` (int, foreign key to Product)
+    - `quantity` (int)
+    - `price` (decimal)
+    - `created_at` (timestamp)
+7. **Transaction**
+    - `transaction_id` (int, primary key)
+    - `invoice_id` (int, foreign key to Invoice)
+    - `amount` (decimal)
+    - `payment_method` (string, e.g., credit card, bank transfer)
+    - `status` (string, e.g., pending, completed, failed)
+    - `payment_date` (timestamp)
+    - `created_at` (timestamp)
+8. **Activity**
+    - `activity_id` (int, primary key)
+    - `user_id` (int, foreign key to User)
+    - `action` (string, e.g., created_invoice, updated_client)
+    - `timestamp` (timestamp)
+    - `related_entity` (string, e.g., invoice_id, client_id)
+9. **Notification**
+    - `notification_id` (int, primary key)
+    - `user_id` (int, foreign key to User)
+    - `message` (text)
+    - `timestamp` (timestamp)
+    - `is_read` (boolean)
+10. **SurveyResponse**
+    - `response_id` (int, primary key)
+    - `user_id` (int, foreign key to User)
+    - `question_id` (int, foreign key to Question)
+    - `answer` (text)
+    - `created_at` (timestamp)
+11. **Question**
+    - `question_id` (int, primary key)
+    - `question_text` (text)
+    - `created_at` (timestamp)
+
+---
+
+### Relationships
+
+- **One-to-Many:**
+    - One `User` can own multiple `Companies`.
+    - One `Company` can have multiple `Clients`, `Products`, and `Invoices`.
+    - One `Client` can have multiple `Invoices`.
+    - One `Invoice` can have multiple `InvoiceItems` and `Transactions`.
+    - One `Product` can be part of multiple `Invoices` through `InvoiceItem`.
+    - One `User` can have multiple `Activities` and `Notifications`.
+    - One `Question` can have multiple `SurveyResponses`.
+
+---
+
+### Indexing and Performance
+
+- Primary keys are indexed by default.
+- Foreign keys are indexed for faster joins.
+- Unique constraints on `email`, `invoice_number`, and `sku`.
+- Consider indexes on frequently searched fields like `email` and `invoice_number`.
+
+---
+
+### Security
+
+- Passwords are hashed and not stored in plain text.
+- Implement proper validation and sanitization to prevent SQL injection.
+- Use role-based access control based on the user's role.
+
+---
+
+### Scalability
+
+- Integers for primary keys are suitable for now, but consider UUIDs for future scalability.
+- Plan for database sharding or replication if needed.
+- Normalize the schema to avoid data redundancy.
+
+---
+
+This schema provides a solid foundation for the SmartInvoice application, ensuring efficient data management and scalability.
