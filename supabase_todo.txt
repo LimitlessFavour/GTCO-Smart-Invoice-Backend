@@ -1,0 +1,188 @@
+# Supabase Setup Steps for SmartInvoice
+
+## 1. Authentication Setup
+- Enable Email/Password authentication
+- Configure OAuth providers (Google, Apple)
+- Set up email templates for:
+  - Email verification
+  - Password reset
+  - Magic link authentication (optional)
+
+## 2. Database Setup
+- Run migrations for all entities:
+  - users
+  - companies
+  - clients
+  - products
+  - invoices
+  - invoice_items
+  - activities
+  - survey_responses
+
+## 3. Storage Setup
+```bash
+# Create necessary buckets
+- company-logos
+- product-images
+- invoice-attachments
+```
+
+### Storage Bucket Policies
+#### Company Logos Bucket
+```sql
+CREATE POLICY "Company logos are publicly accessible"
+ON storage.objects FOR SELECT
+USING (bucket_id = 'company-logos');
+
+CREATE POLICY "Only authenticated users can upload company logos"
+ON storage.objects FOR INSERT
+WITH CHECK (
+  bucket_id = 'company-logos' AND
+  auth.role() = 'authenticated'
+);
+
+CREATE POLICY "Users can only update their own company logos"
+ON storage.objects FOR UPDATE
+USING (
+  bucket_id = 'company-logos' AND
+  auth.uid()::text = (storage.foldername(name))[1]
+);
+
+CREATE POLICY "Users can only delete their own company logos"
+ON storage.objects FOR DELETE
+USING (
+  bucket_id = 'company-logos' AND
+  auth.uid()::text = (storage.foldername(name))[1]
+);
+```
+
+#### Product Images Bucket
+```sql
+CREATE POLICY "Product images are publicly accessible"
+ON storage.objects FOR SELECT
+USING (bucket_id = 'product-images');
+
+CREATE POLICY "Only authenticated users can upload product images"
+ON storage.objects FOR INSERT
+WITH CHECK (
+  bucket_id = 'product-images' AND
+  auth.role() = 'authenticated'
+);
+
+CREATE POLICY "Users can only update their own product images"
+ON storage.objects FOR UPDATE
+USING (
+  bucket_id = 'product-images' AND
+  auth.uid()::text = (storage.foldername(name))[1]
+);
+
+CREATE POLICY "Users can only delete their own product images"
+ON storage.objects FOR DELETE
+USING (
+  bucket_id = 'product-images' AND
+  auth.uid()::text = (storage.foldername(name))[1]
+);
+```
+
+## 4. Environment Variables
+```env
+# Add to your .env file
+SUPABASE_URL=your_project_url
+SUPABASE_ANON_KEY=your_anon_key
+SUPABASE_SERVICE_KEY=your_service_key
+SUPABASE_JWT_SECRET=your_jwt_secret
+```
+
+## 5. Security Configurations
+- Set up Row Level Security (RLS) policies
+- Configure CORS settings
+- Set up rate limiting
+- Enable SSL enforcement
+
+## 6. Database Policies
+```sql
+-- Companies table RLS
+ALTER TABLE companies ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "Users can view their own company"
+ON companies FOR SELECT
+USING (auth.uid()::text = user_id::text);
+
+CREATE POLICY "Users can insert their own company"
+ON companies FOR INSERT
+WITH CHECK (auth.uid()::text = user_id::text);
+
+CREATE POLICY "Users can update their own company"
+ON companies FOR UPDATE
+USING (auth.uid()::text = user_id::text);
+
+-- Products table RLS
+ALTER TABLE products ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "Users can view their company's products"
+ON products FOR SELECT
+USING (
+  company_id IN (
+    SELECT id FROM companies 
+    WHERE user_id::text = auth.uid()::text
+  )
+);
+
+-- Similar policies for other tables...
+```
+
+## 7. Backup Configuration
+- Enable point-in-time recovery
+- Set up database backups
+- Configure backup retention period
+
+## 8. Monitoring Setup
+- Enable database monitoring
+- Set up error tracking
+- Configure performance monitoring
+- Set up usage alerts
+
+## 9. Testing Steps
+1. Test authentication flows
+2. Verify storage permissions
+3. Test RLS policies
+4. Verify backup/restore functionality
+5. Test file upload/download
+6. Verify CORS settings
+7. Test rate limiting
+
+## 10. Production Checklist
+- [ ] SSL enabled
+- [ ] Backups configured
+- [ ] Monitoring active
+- [ ] Rate limits set
+- [ ] Security policies reviewed
+- [ ] Environment variables secured
+- [ ] CORS properly configured
+- [ ] Error tracking enabled
+
+## 11. API Keys and Secrets
+- Generate and securely store:
+  - Service Role key
+  - Anon/Public key
+  - JWT secret
+  - Additional API keys as needed
+
+## 12. Documentation
+- Document all policies
+- Document backup procedures
+- Document recovery procedures
+- Document monitoring alerts
+- Keep configuration changelog
+
+Remember to:
+- Never commit API keys to version control
+- Regularly rotate secrets
+- Monitor storage usage
+- Set up alerts for unusual activity
+- Regularly review access logs
+- Keep Supabase CLI updated
+- Test backup restoration periodically
+```
+
+This setup guide provides a comprehensive checklist for configuring Supabase for your SmartInvoice application. Would you like me to elaborate on any specific section?

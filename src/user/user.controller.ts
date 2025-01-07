@@ -16,6 +16,8 @@ import {
   ApiOperation,
   ApiResponse,
   ApiTags,
+  ApiConsumes,
+  ApiBody,
 } from '@nestjs/swagger';
 import { GetUser } from '../auth/decorators/get-user.decorator';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
@@ -74,6 +76,20 @@ export class UserController {
   @Post('onboard/company')
   @ApiOperation({ summary: 'Complete company onboarding' })
   @ApiResponse({ status: 201, description: 'Company onboarding completed' })
+  @ApiConsumes('multipart/form-data')
+  @ApiBody({
+    schema: {
+      type: 'object',
+      properties: {
+        companyName: { type: 'string' },
+        description: { type: 'string' },
+        logo: {
+          type: 'string',
+          format: 'binary',
+        },
+      },
+    },
+  })
   @UseInterceptors(FileInterceptor('logo'))
   async onboardCompany(
     @GetUser() user: any,

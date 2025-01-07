@@ -28,7 +28,7 @@ export class Company {
   logo: string;
 
   // Relationship with User (Owner)
-  @Column()
+  @Column({ type: 'uuid' })
   userId: string;
 
   @OneToOne(() => User, (user) => user.company)

@@ -1,19 +1,17 @@
-import { IsString, IsNotEmpty, IsOptional } from 'class-validator';
-import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
+import { IsString, IsNotEmpty } from 'class-validator';
+import { ApiProperty } from '@nestjs/swagger';
 
 export class OnboardCompanyDto {
-  @ApiProperty()
+  @ApiProperty({ type: 'string', format: 'text' })
   @IsString()
   @IsNotEmpty()
   companyName: string;
 
-  @ApiProperty()
+  @ApiProperty({ type: 'string', format: 'text' })
   @IsString()
   @IsNotEmpty()
   description: string;
 
-  @ApiPropertyOptional()
-  @IsString()
-  @IsOptional()
-  logo?: string; // Will be handled by file upload
+  @ApiProperty({ type: 'string', format: 'binary', required: false })
+  logo?: any;
 }
