@@ -61,10 +61,20 @@ export class ClientService {
       .filter((invoice) => invoice.status === InvoiceStatus.PAID)
       .reduce((sum, invoice) => sum + invoice.totalAmount, 0);
 
+    const totalInvoicesSent = client.invoices.filter(
+      (invoice) => invoice.status !== InvoiceStatus.DRAFT,
+    ).length;
+
+    const totalInvoicesDrafted = client.invoices.filter(
+      (invoice) => invoice.status === InvoiceStatus.DRAFT,
+    ).length;
+
     const clientDetails = new ClientDetailsDto(client);
     clientDetails.totalOverdueAmount = totalOverdueAmount;
     clientDetails.totalDraftedAmount = totalDraftedAmount;
     clientDetails.totalPaidAmount = totalPaidAmount;
+    clientDetails.totalInvoicesSent = totalInvoicesSent;
+    clientDetails.totalInvoicesDrafted = totalInvoicesDrafted;
 
     return clientDetails;
   }

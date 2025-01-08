@@ -69,6 +69,18 @@ export class ClientDetailsDto {
   })
   invoices: Invoice[];
 
+  @ApiProperty({
+    description: 'Total number of invoices sent to the client',
+    example: 15,
+  })
+  totalInvoicesSent: number;
+
+  @ApiProperty({
+    description: 'Total number of drafted invoices for the client',
+    example: 3,
+  })
+  totalInvoicesDrafted: number;
+
   constructor(client: Client) {
     Object.assign(this, client);
   }
