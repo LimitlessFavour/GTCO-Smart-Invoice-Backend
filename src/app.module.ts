@@ -24,6 +24,7 @@ import { BulkUploadJob } from './product/entities/bulk-upload-job.entity';
 import { BulkUploadProduct } from './product/entities/bulk-upload-product.entity';
 import { BulkClientUploadJob } from './client/entities/bulk-client-upload-job.entity';
 import { BulkClientUploadItem } from './client/entities/bulk-client-upload-item.entity';
+import { WebhookModule } from './webhooks/webhook.module';
 
 @Module({
   imports: [
@@ -63,6 +64,7 @@ import { BulkClientUploadItem } from './client/entities/bulk-client-upload-item.
     ActivityModule,
     SurveyResponseModule,
     AuthModule,
+    WebhookModule,
   ],
   controllers: [AppController],
   providers: [AppService],

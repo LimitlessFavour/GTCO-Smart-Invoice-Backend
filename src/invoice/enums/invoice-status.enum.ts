@@ -3,4 +3,5 @@ export enum InvoiceStatus {
   UNPAID = 'unpaid',
   OVERDUE = 'overdue',
   DRAFT = 'draft',
+  CANCELLED = 'cancelled',
 }

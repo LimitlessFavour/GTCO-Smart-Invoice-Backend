@@ -39,7 +39,10 @@ export class InvoiceService {
     private squadService: SquadService,
   ) {}
 
-  async create(createInvoiceDto: CreateInvoiceDto): Promise<Invoice> {
+  async create(
+    createInvoiceDto: CreateInvoiceDto,
+    isDraft: boolean = false,
+  ): Promise<Invoice> {
     try {
       // First verify that client and company exist
       const client = await this.clientRepository.findOne({
@@ -70,13 +73,14 @@ export class InvoiceService {
         });
       }
 
-      // Create the invoice
+      // Create the invoice with draft status if specified
       const invoice = this.invoiceRepository.create({
         dueDate: createInvoiceDto.dueDate,
         client: { id: createInvoiceDto.clientId },
         company: { id: createInvoiceDto.companyId },
         invoiceNumber: `INV-${Date.now()}`,
         totalAmount: 0,
+        status: isDraft ? InvoiceStatus.DRAFT : InvoiceStatus.UNPAID,
       });
 
       // Save the invoice first to get the ID
@@ -177,28 +181,30 @@ export class InvoiceService {
           );
         }
 
-        // Generate PDF and payment link
-        const [pdfPath, paymentLink] = await Promise.all([
-          this.pdfService.generateInvoicePdf(completeInvoice),
-          this.squadService.createPaymentLink(
-            completeInvoice.totalAmount,
+        // Only generate PDF and payment link if not a draft
+        if (!isDraft) {
+          const [pdfPath, paymentLink] = await Promise.all([
+            this.pdfService.generateInvoicePdf(completeInvoice),
+            this.squadService.createPaymentLink(
+              completeInvoice.totalAmount,
+              completeInvoice.client.email,
+              completeInvoice.invoiceNumber,
+              completeInvoice.transactionRef,
+            ),
+          ]);
+
+          // Update invoice with payment link
+          completeInvoice.paymentLink = paymentLink;
+          await this.invoiceRepository.save(completeInvoice);
+
+          // Send email
+          await this.emailService.sendInvoiceEmail(
             completeInvoice.client.email,
-            completeInvoice.invoiceNumber,
-            completeInvoice.transactionRef,
-          ),
-        ]);
-
-        // Update invoice with payment link
-        completeInvoice.paymentLink = paymentLink;
-        await this.invoiceRepository.save(completeInvoice);
-
-        // Send email
-        await this.emailService.sendInvoiceEmail(
-          completeInvoice.client.email,
-          completeInvoice.client.firstName,
-          pdfPath,
-          completeInvoice.paymentLink,
-        );
+            completeInvoice.client.firstName,
+            pdfPath,
+            completeInvoice.paymentLink,
+          );
+        }
 
         return this.findOne(completeInvoice.id);
       } catch (error) {
@@ -252,9 +258,17 @@ export class InvoiceService {
     updateInvoiceDto: UpdateInvoiceDto,
   ): Promise<Invoice> {
     const invoice = await this.findOne(id);
+
+    if (invoice.status !== InvoiceStatus.DRAFT) {
+      throw new BadRequestException({
+        message: 'Only draft invoices can be updated',
+        statusCode: 400,
+        details: `Invoice ${invoice.invoiceNumber} is in ${invoice.status} status`,
+      });
+    }
+
     Object.assign(invoice, updateInvoiceDto);
-    await this.invoiceRepository.save(invoice);
-    return invoice;
+    return this.invoiceRepository.save(invoice);
   }
 
   async updateStatus(id: number, status: InvoiceStatus): Promise<Invoice> {
@@ -302,6 +316,44 @@ export class InvoiceService {
       invoice.client.firstName,
       invoice.invoiceNumber,
       amount,
+    );
+
+    return invoice;
+  }
+
+  // New method to finalize a draft invoice
+  async finalizeDraft(id: number): Promise<Invoice> {
+    const invoice = await this.findOne(id);
+
+    if (invoice.status !== InvoiceStatus.DRAFT) {
+      throw new BadRequestException({
+        message: 'Only draft invoices can be finalized',
+        statusCode: 400,
+      });
+    }
+
+    // Generate PDF and payment link
+    const [pdfPath, paymentLink] = await Promise.all([
+      this.pdfService.generateInvoicePdf(invoice),
+      this.squadService.createPaymentLink(
+        invoice.totalAmount,
+        invoice.client.email,
+        invoice.invoiceNumber,
+        invoice.transactionRef,
+      ),
+    ]);
+
+    // Update invoice status and payment link
+    invoice.status = InvoiceStatus.UNPAID;
+    invoice.paymentLink = paymentLink;
+    await this.invoiceRepository.save(invoice);
+
+    // Send email
+    await this.emailService.sendInvoiceEmail(
+      invoice.client.email,
+      invoice.client.firstName,
+      pdfPath,
+      invoice.paymentLink,
     );
 
     return invoice;

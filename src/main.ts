@@ -21,6 +21,7 @@ async function bootstrap() {
     .addTag('Invoice', 'Invoice Generation, Management and Payment Processing')
     .addTag('Product', 'Product Catalog and Inventory Management')
     .addTag('Company', 'Company Profile and Business Settings Management')
+    .addTag('Webhooks', 'Payment Gateway Webhook Handlers')
     .addBearerAuth()
     .build();
 

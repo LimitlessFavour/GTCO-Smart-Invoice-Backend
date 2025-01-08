@@ -11,7 +11,9 @@ import { SquadService } from '../services/gtco_squad.service';
 import { InvoiceService } from '../invoice/invoice.service';
 import { InvoiceStatus } from 'src/invoice/enums/invoice-status.enum';
 import { EmailService } from 'src/services/email.service';
+import { ApiTags, ApiOperation, ApiResponse } from '@nestjs/swagger';
 
+@ApiTags('Webhooks')
 @Controller('webhooks/squad')
 export class SquadWebhookController {
   private readonly logger = new Logger(SquadWebhookController.name);
@@ -23,6 +25,10 @@ export class SquadWebhookController {
   ) {}
 
   @Post()
+  @ApiOperation({ summary: 'Handle Squad payment webhook' })
+  @ApiResponse({ status: 200, description: 'Webhook processed successfully' })
+  @ApiResponse({ status: 401, description: 'Invalid or missing signature' })
+  @ApiResponse({ status: 500, description: 'Internal server error' })
   async handleWebhook(
     @Headers('x-squad-encrypted-body') signature: string,
     @Body() payload: any,
@@ -34,10 +40,23 @@ export class SquadWebhookController {
     });
 
     if (!signature) {
+      this.logger.warn('Webhook received without signature');
       throw new UnauthorizedException('Missing webhook signature');
     }
 
-    if (!this.squadService.verifyWebhookSignature(payload, signature)) {
+    const isValidSignature = this.squadService.verifyWebhookSignature(
+      payload,
+      signature,
+    );
+    this.logger.debug('Webhook signature verification:', {
+      isValid: isValidSignature,
+    });
+
+    if (!isValidSignature) {
+      this.logger.warn('Invalid webhook signature received', {
+        event: payload?.Event,
+        transactionRef: payload?.TransactionRef,
+      });
       throw new UnauthorizedException('Invalid webhook signature');
     }
 
@@ -84,7 +103,12 @@ export class SquadWebhookController {
     } catch (error) {
       this.logger.error(
         'Error processing webhook:',
-        error?.stack,
+        {
+          error: error?.message,
+          stack: error?.stack,
+          event: payload?.Event,
+          transactionRef: payload?.TransactionRef,
+        },
         'handleWebhook',
       );
       throw new InternalServerErrorException('Failed to process webhook');

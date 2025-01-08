@@ -35,7 +35,42 @@ export class InvoiceController {
     description: 'Internal server error',
   })
   async create(@Body() createInvoiceDto: CreateInvoiceDto) {
-    return this.invoiceService.create(createInvoiceDto);
+    return this.invoiceService.create(createInvoiceDto, false);
+  }
+
+  @Post('draft')
+  @ApiOperation({ summary: 'Create a new draft invoice' })
+  @ApiResponse({
+    status: HttpStatus.CREATED,
+    description: 'Draft invoice created successfully',
+    type: Invoice,
+  })
+  @ApiResponse({
+    status: HttpStatus.BAD_REQUEST,
+    description: 'Invalid input data',
+  })
+  @ApiResponse({
+    status: HttpStatus.INTERNAL_SERVER_ERROR,
+    description: 'Internal server error',
+  })
+  async createDraft(@Body() createInvoiceDto: CreateInvoiceDto) {
+    return this.invoiceService.create(createInvoiceDto, true);
+  }
+
+  @Post('draft/:id/finalize')
+  @ApiOperation({ summary: 'Finalize a draft invoice' })
+  @ApiParam({ name: 'id', description: 'Invoice ID', type: 'number' })
+  @ApiResponse({
+    status: HttpStatus.OK,
+    description: 'Invoice finalized successfully',
+    type: Invoice,
+  })
+  @ApiResponse({
+    status: HttpStatus.NOT_FOUND,
+    description: 'Invoice not found',
+  })
+  async finalizeDraft(@Param('id') id: string) {
+    return this.invoiceService.finalizeDraft(+id);
   }
 
   @Get()
