@@ -22,6 +22,8 @@ import { SurveyResponse } from './survey-response/survey-response.entity';
 import { ConfigModule } from '@nestjs/config';
 import { BulkUploadJob } from './product/entities/bulk-upload-job.entity';
 import { BulkUploadProduct } from './product/entities/bulk-upload-product.entity';
+import { BulkClientUploadJob } from './client/entities/bulk-client-upload-job.entity';
+import { BulkClientUploadItem } from './client/entities/bulk-client-upload-item.entity';
 
 @Module({
   imports: [
@@ -46,8 +48,11 @@ import { BulkUploadProduct } from './product/entities/bulk-upload-product.entity
         SurveyResponse,
         BulkUploadJob,
         BulkUploadProduct,
+        BulkClientUploadJob,
+        BulkClientUploadItem,
       ],
       synchronize: true,
+      autoLoadEntities: true,
     }),
     ClientModule,
     UserModule,
