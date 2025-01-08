@@ -11,7 +11,7 @@ import {
 import { Invoice } from '../invoice/invoice.entity';
 import { User } from '../user/user.entity';
 import { Client } from '../client/client.entity';
-import { Product } from '../product/product.entity';
+import { Product } from '../product/entities/product.entity';
 
 @Entity('companies')
 export class Company {

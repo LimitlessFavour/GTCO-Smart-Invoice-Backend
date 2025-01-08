@@ -7,10 +7,10 @@ import {
   ManyToOne,
   OneToMany,
 } from 'typeorm';
-import { Company } from '../company/company.entity';
-import { InvoiceItem } from '../invoice/invoice-item.entity';
-import { ProductCategory } from './enums/product-category.enum';
-import { VatCategory } from './enums/vat-category.enum';
+import { Company } from '../../company/company.entity';
+import { InvoiceItem } from '../../invoice/invoice-item.entity';
+import { ProductCategory } from '../enums/product-category.enum';
+import { VatCategory } from '../enums/vat-category.enum';
 
 @Entity('products')
 export class Product {

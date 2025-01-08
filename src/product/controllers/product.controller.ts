@@ -12,9 +12,9 @@ import {
   UseInterceptors,
   UploadedFile,
 } from '@nestjs/common';
-import { ProductService } from './product.service';
-import { CreateProductDto } from './dto/create-product.dto';
-import { UpdateProductDto } from './dto/update-product.dto';
+import { ProductService } from '../services/product.service';
+import { CreateProductDto } from '../dto/create-product.dto';
+import { UpdateProductDto } from '../dto/update-product.dto';
 import {
   ApiTags,
   ApiOperation,
@@ -24,11 +24,11 @@ import {
   ApiConsumes,
   ApiBody,
 } from '@nestjs/swagger';
-import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
-import { RequestContext } from '../common/interfaces/request-context.interface';
+import { JwtAuthGuard } from '../../auth/guards/jwt-auth.guard';
+import { RequestContext } from '../../common/interfaces/request-context.interface';
 import { FileInterceptor } from '@nestjs/platform-express';
-import { VatCategory } from './enums/vat-category.enum';
-import { ProductCategory } from './enums/product-category.enum';
+import { VatCategory } from '../enums/vat-category.enum';
+import { ProductCategory } from '../enums/product-category.enum';
 
 @ApiTags('Product')
 @ApiBearerAuth()

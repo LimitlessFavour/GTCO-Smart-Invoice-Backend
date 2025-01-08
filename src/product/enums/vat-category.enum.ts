@@ -1,4 +1,5 @@
 export enum VatCategory {
   FIVE_PERCENT = 5,
   SEVEN_POINT_FIVE_PERCENT = 7.5,
+  ZERO_PERCENT = 0,
 }

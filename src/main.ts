@@ -3,7 +3,6 @@ import { AppModule } from './app.module';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import { Request, Response, NextFunction } from 'express';
 import * as yaml from 'js-yaml';
-// import { ApiOperation, ApiResponse, ApiQuery } from '@nestjs/swagger';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
@@ -13,13 +12,13 @@ async function bootstrap() {
     .setTitle('GTCO Smart Invoice API')
     .setDescription('API documentation for GTCO Smart Invoice')
     .setVersion('1.0')
-    .addTag('Schema', 'API Schema operations')
-    .addTag('Auth', '1')
-    .addTag('User', '2')
-    .addTag('Client', '3')
-    .addTag('Invoice', '4')
-    .addTag('Product', '5')
-    .addTag('Company', '6')
+    .addTag('Schema', 'API Schema and Documentation Operations')
+    .addTag('Auth', 'Authentication and Authorization Management')
+    .addTag('User', 'User Account and Profile Management')
+    .addTag('Client', 'Client Information and Relationship Management')
+    .addTag('Invoice', 'Invoice Generation, Management and Payment Processing')
+    .addTag('Product', 'Product Catalog and Inventory Management')
+    .addTag('Company', 'Company Profile and Business Settings Management')
     .addBearerAuth()
     .build();
 

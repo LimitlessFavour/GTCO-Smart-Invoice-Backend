@@ -1,0 +1,31 @@
+productName,description,category,price,defaultQuantity,vatCategory
+"Office Chair","Ergonomic office chair with lumbar support",FURNITURE,299.99,1,FIVE_PERCENT
+"Laptop Stand","Adjustable aluminum laptop stand",ELECTRONICS,49.99,1,FIVE_PERCENT
+"Wireless Mouse","Bluetooth wireless mouse",ELECTRONICS,29.99,1,FIVE_PERCENT
+"Desk Lamp","LED desk lamp with adjustable brightness",ELECTRONICS,39.99,1,FIVE_PERCENT
+"Notebook","Premium hardcover notebook, A4 size",STATIONERY,12.99,5,FIVE_PERCENT
+"Pen Set","Set of 12 gel pens, assorted colors",STATIONERY,8.99,10,FIVE_PERCENT
+"Monitor","27-inch 4K LED monitor",ELECTRONICS,399.99,1,FIVE_PERCENT
+"Keyboard","Mechanical keyboard with RGB lighting",ELECTRONICS,129.99,1,FIVE_PERCENT
+"Filing Cabinet","3-drawer metal filing cabinet",FURNITURE,199.99,1,FIVE_PERCENT
+"Desk","L-shaped corner desk",FURNITURE,349.99,1,FIVE_PERCENT
+"Whiteboard","Large magnetic whiteboard",OFFICE_SUPPLIES,79.99,1,FIVE_PERCENT
+"Markers","Whiteboard markers, pack of 8",OFFICE_SUPPLIES,11.99,5,FIVE_PERCENT
+"Paper Clips","Box of 1000 paper clips",STATIONERY,3.99,20,FIVE_PERCENT
+"Stapler","Heavy-duty desktop stapler",OFFICE_SUPPLIES,16.99,2,FIVE_PERCENT
+"Printer","Color laser printer",ELECTRONICS,499.99,1,FIVE_PERCENT
+"Coffee Maker","12-cup programmable coffee maker",ELECTRONICS,89.99,1,FIVE_PERCENT
+"Desk Mat","Large desk mat with edge stitching",OFFICE_SUPPLIES,24.99,2,FIVE_PERCENT
+"Bookshelf","5-shelf wooden bookshelf",FURNITURE,159.99,1,FIVE_PERCENT
+"USB Hub","7-port USB 3.0 hub",ELECTRONICS,34.99,2,FIVE_PERCENT
+"Desk Fan","USB-powered desk fan",ELECTRONICS,19.99,2,FIVE_PERCENT
+"File Folders","Pack of 50 manila file folders",OFFICE_SUPPLIES,15.99,5,FIVE_PERCENT
+"Scissors","Professional office scissors",OFFICE_SUPPLIES,8.99,3,FIVE_PERCENT
+"Tape Dispenser","Heavy-duty tape dispenser",OFFICE_SUPPLIES,12.99,2,FIVE_PERCENT
+"Wall Clock","Modern analog wall clock",OFFICE_SUPPLIES,29.99,1,FIVE_PERCENT
+"Desk Organizer","Mesh desk organizer set",OFFICE_SUPPLIES,22.99,2,FIVE_PERCENT
+"Calculator","Desktop calculator",ELECTRONICS,17.99,1,FIVE_PERCENT
+"Paper Shredder","Cross-cut paper shredder",ELECTRONICS,89.99,1,FIVE_PERCENT
+"Waste Bin","Metal mesh waste bin",OFFICE_SUPPLIES,19.99,2,FIVE_PERCENT
+"Storage Box","Collapsible storage box",OFFICE_SUPPLIES,14.99,5,FIVE_PERCENT
+"First Aid Kit","Office first aid kit",OTHER,39.99,1,FIVE_PERCENT

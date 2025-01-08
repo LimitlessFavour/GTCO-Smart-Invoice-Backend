@@ -13,13 +13,15 @@ import { AuthModule } from './auth/auth.module';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { Invoice } from './invoice/invoice.entity';
 import { InvoiceItem } from './invoice/invoice-item.entity';
-import { Product } from './product/product.entity';
+import { Product } from './product/entities/product.entity';
 import { Company } from './company/company.entity';
 import { Client } from './client/client.entity';
 import { User } from './user/user.entity';
 import { Activity } from './activity/activity.entity';
 import { SurveyResponse } from './survey-response/survey-response.entity';
 import { ConfigModule } from '@nestjs/config';
+import { BulkUploadJob } from './product/entities/bulk-upload-job.entity';
+import { BulkUploadProduct } from './product/entities/bulk-upload-product.entity';
 
 @Module({
   imports: [
@@ -42,6 +44,8 @@ import { ConfigModule } from '@nestjs/config';
         User,
         Activity,
         SurveyResponse,
+        BulkUploadJob,
+        BulkUploadProduct,
       ],
       synchronize: true,
     }),
