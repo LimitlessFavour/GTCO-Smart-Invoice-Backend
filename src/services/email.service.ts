@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import * as nodemailer from 'nodemailer';
 import { emailTemplates } from './email-templates';
@@ -7,15 +7,29 @@ import { emailTemplates } from './email-templates';
 export class EmailService {
   private transporter: nodemailer.Transporter;
   private readonly companyName: string;
+  private readonly logger = new Logger(EmailService.name);
 
   constructor(private configService: ConfigService) {
     this.transporter = nodemailer.createTransport({
-      service: 'gmail', // Use your email service
+      host: this.configService.get('EMAIL_HOST'),
+      port: this.configService.get('EMAIL_PORT'),
+      secure: false, // upgrade later with STARTTLS
       auth: {
         user: this.configService.get('EMAIL_USER'),
         pass: this.configService.get('EMAIL_PASSWORD'),
       },
     });
+
+    // Verify connection configuration
+    this.transporter.verify((error, success) => {
+      if (error) {
+        this.logger.error('SMTP Connection Error:', error);
+      } else {
+        this.logger.log('Server is ready to take our messages');
+        this.logger.log('SMTP Connection Success:', success);
+      }
+    });
+
     this.companyName = this.configService.get(
       'COMPANY_NAME',
       'GTCO SmartInvoice',

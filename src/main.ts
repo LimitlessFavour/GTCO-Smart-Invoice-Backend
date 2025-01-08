@@ -5,7 +5,9 @@ import { Request, Response, NextFunction } from 'express';
 import * as yaml from 'js-yaml';
 
 async function bootstrap() {
-  const app = await NestFactory.create(AppModule);
+  const app = await NestFactory.create(AppModule, {
+    logger: ['error', 'warn', 'debug', 'log', 'verbose'],
+  });
 
   // Swagger configuration
   const config = new DocumentBuilder()
