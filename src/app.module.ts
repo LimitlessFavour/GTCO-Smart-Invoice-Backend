@@ -10,6 +10,7 @@ import { TransactionModule } from './transaction/transaction.module';
 import { ActivityModule } from './activity/activity.module';
 import { SurveyResponseModule } from './survey-response/survey-response.module';
 import { AuthModule } from './auth/auth.module';
+import { AnalyticsModule } from './analytics/analytics.module';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { Invoice } from './invoice/invoice.entity';
 import { InvoiceItem } from './invoice/invoice-item.entity';
@@ -65,6 +66,7 @@ import { WebhookModule } from './webhooks/webhook.module';
     SurveyResponseModule,
     AuthModule,
     WebhookModule,
+    AnalyticsModule,
   ],
   controllers: [AppController],
   providers: [AppService],

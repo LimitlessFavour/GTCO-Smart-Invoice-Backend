@@ -144,6 +144,26 @@ export class EmailService {
     await this.transporter.sendMail(mailOptions);
   }
 
+  async sendPasswordResetEmail(
+    to: string,
+    name: string,
+    resetLink: string,
+  ): Promise<void> {
+    const mailOptions = {
+      from: `"${this.companyName}" <${this.configService.get('EMAIL_USER')}>`,
+      to,
+      subject: 'Reset Your Password - GTCO SmartInvoice',
+      html: authTemplates.resetPassword({ name, resetLink }),
+    };
+
+    try {
+      await this.transporter.sendMail(mailOptions);
+    } catch (error) {
+      this.logger.error('Error sending password reset email:', error);
+      throw new Error('Failed to send password reset email');
+    }
+  }
+
   // Helper method to format currency
   private formatCurrency(amount: number): string {
     return new Intl.NumberFormat('en-NG', {

@@ -4,6 +4,7 @@ import {
   BadRequestException,
   ConflictException,
   InternalServerErrorException,
+  NotFoundException,
 } from '@nestjs/common';
 import { SupabaseClient, createClient } from '@supabase/supabase-js';
 import { ConfigService } from '@nestjs/config';
@@ -17,6 +18,9 @@ import { Logger } from '@nestjs/common';
 import { v4 as uuidv4 } from 'uuid';
 import { add } from 'date-fns';
 import { RefreshToken } from './entities/refresh-token.entity';
+import { EmailService } from 'src/services/email.service';
+import { MoreThan } from 'typeorm';
+import * as crypto from 'crypto';
 
 @Injectable()
 export class AuthService {
@@ -30,6 +34,7 @@ export class AuthService {
     private readonly userRepository: Repository<User>,
     @InjectRepository(RefreshToken)
     private refreshTokenRepository: Repository<RefreshToken>,
+    private readonly emailService: EmailService,
   ) {
     this.supabase = createClient(
       this.configService.get<string>('SUPABASE_URL'),
@@ -154,21 +159,31 @@ export class AuthService {
     try {
       this.logger.debug(`Attempting to send password reset email to: ${email}`);
 
-      const { error } = await this.supabase.auth.resetPasswordForEmail(email, {
-        redirectTo: `${this.configService.get<string>('FRONTEND_URL')}/auth/reset-password`,
+      // Get user details first
+      const user = await this.userRepository.findOne({ where: { email } });
+      if (!user) {
+        throw new NotFoundException('User not found');
+      }
+
+      // Generate a secure token using Node.js crypto
+      const resetToken = crypto.randomBytes(32).toString('hex');
+      const resetTokenExpiry = add(new Date(), { hours: 1 }); // Using date-fns
+
+      // Store the reset token
+      await this.userRepository.update(user.id, {
+        resetPasswordToken: resetToken,
+        resetPasswordExpires: resetTokenExpiry,
       });
 
-      if (error) {
-        this.logger.error(
-          `Failed to send password reset email: ${error.message}`,
-          error.stack,
-          'forgotPassword',
-        );
-        throw new BadRequestException({
-          message: 'Failed to send password reset email: ' + error.message,
-          statusCode: 400,
-        });
-      }
+      // Create reset link
+      const resetLink = `${this.configService.get<string>('FRONTEND_URL')}/auth/reset-password?token=${resetToken}`;
+
+      // Send email
+      await this.emailService.sendPasswordResetEmail(
+        email,
+        user.firstName,
+        resetLink,
+      );
 
       return {
         message: 'Password reset instructions sent to your email',
@@ -419,6 +434,43 @@ export class AuthService {
         message: 'Failed to logout',
         statusCode: 500,
       });
+    }
+  }
+
+  async resetPassword(token: string, newPassword: string) {
+    try {
+      // Find user with valid reset token
+      const user = await this.userRepository.findOne({
+        where: {
+          resetPasswordToken: token,
+          resetPasswordExpires: MoreThan(new Date()),
+        },
+      });
+
+      if (!user) {
+        throw new BadRequestException('Invalid or expired reset token');
+      }
+
+      // Update password in Supabase
+      const { error } = await this.supabase.auth.updateUser({
+        password: newPassword,
+      });
+
+      if (error) throw error;
+
+      // Clear reset token
+      await this.userRepository.update(user.id, {
+        resetPasswordToken: null,
+        resetPasswordExpires: null,
+      });
+
+      return {
+        message: 'Password updated successfully',
+        statusCode: 200,
+      };
+    } catch (error) {
+      this.logger.error('Reset password error', error);
+      throw new BadRequestException('Failed to reset password');
     }
   }
 }

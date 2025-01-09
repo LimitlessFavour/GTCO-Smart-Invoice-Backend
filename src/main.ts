@@ -14,14 +14,63 @@ async function bootstrap() {
     .setTitle('GTCO Smart Invoice API')
     .setDescription('API documentation for GTCO Smart Invoice')
     .setVersion('1.0')
-    .addTag('Schema', 'API Schema and Documentation Operations')
-    .addTag('Auth', 'Authentication and Authorization Management')
-    .addTag('User', 'User Account and Profile Management')
-    .addTag('Client', 'Client Information and Relationship Management')
-    .addTag('Invoice', 'Invoice Generation, Management and Payment Processing')
-    .addTag('Product', 'Product Catalog and Inventory Management')
-    .addTag('Company', 'Company Profile and Business Settings Management')
-    .addTag('Webhooks', 'Payment Gateway Webhook Handlers')
+    // Core System & Authentication
+    .addTag(
+      'Schema',
+      'API Schema, Documentation Operations and OpenAPI Specifications',
+    )
+    .addTag(
+      'Auth',
+      'Authentication, Authorization, OAuth2 Integration and Token Management',
+    )
+
+    // User & Company Management
+    .addTag(
+      'User',
+      'User Account Management, Profile Settings and Onboarding Flow',
+    )
+    .addTag(
+      'Company',
+      'Company Profile, Business Settings and Organization Management',
+    )
+
+    // Core Business Operations
+    .addTag(
+      'Client',
+      'Client Management, Contact Information and Client Relationships',
+    )
+    .addTag(
+      'Product',
+      'Product Catalog, Inventory Management and Pricing Configuration',
+    )
+    .addTag(
+      'Invoice',
+      'Invoice Creation, Management, Payment Processing and PDF Generation',
+    )
+    .addTag(
+      'Transactions',
+      'Payment Transactions, Financial Records and Transaction History',
+    )
+
+    // Analytics & Reporting
+    .addTag(
+      'Analytics',
+      'Business Intelligence, Financial Analytics and Performance Metrics Dashboard',
+    )
+
+    // Supporting Features
+    .addTag(
+      'Activities',
+      'System Activity Logs, Audit Trail and User Action History',
+    )
+    .addTag(
+      'Notifications',
+      'Push Notifications, Email Alerts and Communication Preferences',
+    )
+    .addTag(
+      'Webhooks',
+      'Payment Gateway Integration, Webhook Handlers and External System Events',
+    )
     .addBearerAuth()
     .build();
 
