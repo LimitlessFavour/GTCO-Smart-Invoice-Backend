@@ -3,10 +3,13 @@ import {
   InternalServerErrorException,
   BadRequestException,
   Logger,
+  Inject,
+  forwardRef,
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import axios from 'axios';
 import * as crypto from 'crypto';
+import { InvoiceService } from 'src/invoice/invoice.service';
 
 @Injectable()
 export class SquadService {
@@ -17,24 +20,23 @@ export class SquadService {
 
   private readonly logger = new Logger(SquadService.name);
 
-  constructor(private configService: ConfigService) {
-    this.squadBaseUrl = 'https://sandbox-api-d.squadco.com';
-    this.squadPaymentUrl = 'https://sandbox-pay.squadco.com';
+  constructor(
+    private configService: ConfigService,
+    @Inject(forwardRef(() => InvoiceService))
+    private invoiceService: InvoiceService,
+  ) {
+    this.squadBaseUrl = this.configService.get('SQUAD_BASE_URL');
+    this.squadPaymentUrl = this.configService.get('SQUAD_PAYMENT_URL');
     this.squadSecretKey = this.configService.get<string>('SQUAD_SECRET_KEY');
     this.squadPublicKey = this.configService.get<string>('SQUAD_PUBLIC_KEY');
-  }
-
-  private generateUniqueHash(): string {
-    // Generate a random string using crypto instead of nanoid
-    return crypto.randomBytes(8).toString('hex');
   }
 
   async createPaymentLink(
     amount: number,
     email: string,
     description: string,
-    transactionRef?: string,
-  ): Promise<string> {
+    transactionRef: string,
+  ): Promise<{ paymentUrl: string; squadRef: string }> {
     try {
       this.logger.debug('Creating payment link with data:', {
         amount,
@@ -47,33 +49,19 @@ export class SquadService {
         throw new BadRequestException('Amount must be greater than 0');
       }
 
-      const hash = this.generateUniqueHash();
-
       const payload = {
-        name: 'Invoice Payment',
-        hash: hash,
-        link_status: 1,
-        expire_by: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString(),
-        amounts: [
-          {
-            amount: Math.round(amount * 100),
-            currency_id: 'NGN',
-          },
-        ],
-        description: description,
-        redirect_link: this.configService.get('SQUAD_RETURN_URL'),
-        return_msg: 'Payment Successful',
+        amount: Math.round(amount * 100), // Convert to kobo
+        email: email,
+        currency: 'NGN',
+        initiate_type: 'inline',
+        transaction_ref: transactionRef,
+        callback_url: this.configService.get('SQUAD_RETURN_URL'),
       };
 
       this.logger.debug('Squad API request payload:', payload);
-      this.logger.debug('Squad API configuration:', {
-        baseUrl: this.squadBaseUrl,
-        hasSecretKey: !!this.squadSecretKey,
-        returnUrl: this.configService.get('SQUAD_RETURN_URL'),
-      });
 
       const response = await axios.post(
-        `${this.squadBaseUrl}/payment_link/otp`,
+        `${this.squadBaseUrl}/transaction/initiate`,
         payload,
         {
           headers: {
@@ -88,12 +76,26 @@ export class SquadService {
         data: response.data,
       });
 
-      if (!response.data?.success) {
+      if (response.data?.status !== 200) {
         throw new Error('Failed to create payment link');
       }
 
-      const paymentUrl = `${this.squadPaymentUrl}/${hash}`;
-      return paymentUrl;
+      const squadRef = response.data?.data?.transaction_ref;
+      const paymentUrl = response.data?.data?.checkout_url;
+
+      if (!squadRef || !paymentUrl) {
+        throw new Error('Invalid response from Squad API');
+      }
+
+      await this.invoiceService.updateSquadTransactionRef(
+        transactionRef,
+        squadRef,
+      );
+
+      return {
+        paymentUrl,
+        squadRef,
+      };
     } catch (error) {
       this.logger.error(
         `Error creating payment link:`,

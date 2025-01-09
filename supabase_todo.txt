@@ -205,3 +205,37 @@ curl -X POST http://localhost:3000/auth/forgot-password \
 ```
 
 The user will receive an email with a reset link that redirects to your frontend application's reset password page.
+
+so I the issue is that, the initiate payment endpoint response does not return a transaction refrence but the webhooks event does,
+but the webhooks event response does not return the hash, while the initiate payment endpoint does. what do we do?
+
+sample initiate payment response:
+
+
+sample webhook response:
+{
+  "Event": "charge_successful",
+  "TransactionRef": "SQCHIZ410708",
+  "Body": {
+    "amount": 10000,
+    "transaction_ref": "SQCHIZ410708",
+    "gateway_ref": "f7c810f4-b53e-4970-a3f6",
+    "transaction_status": "Success",
+    "email": "0803***0000",
+    "merchant_id": "********",
+    "currency": "NGN",
+    "transaction_type": "MerchantUssd",
+    "merchant_amount": 10000,
+    "created_at": "2022-11-30T16:21:52.8850061+00:00",
+    "customer_mobile": "0803***0000",
+    "meta": {},
+    "payment_information": {
+      "payment_type": "merchantussd",
+      "customer_ref": "123456"
+    },
+    "is_recurring": false
+  }
+}
+
+
+how do we recognize which invoice is being paid off?

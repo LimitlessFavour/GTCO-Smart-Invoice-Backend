@@ -4,6 +4,8 @@ import {
   InternalServerErrorException,
   BadRequestException,
   Logger,
+  forwardRef,
+  Inject,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
@@ -18,6 +20,7 @@ import { InvoiceStatus } from './enums/invoice-status.enum';
 import { Client } from 'src/client/client.entity';
 import { Company } from 'src/company/company.entity';
 import { Product } from 'src/product/entities/product.entity';
+import * as crypto from 'crypto';
 
 @Injectable()
 export class InvoiceService {
@@ -36,8 +39,14 @@ export class InvoiceService {
     private productRepository: Repository<Product>,
     private pdfService: PdfService,
     private emailService: EmailService,
+    @Inject(forwardRef(() => SquadService))
     private squadService: SquadService,
   ) {}
+
+  private generateUniqueHash(): string {
+    // Generate a random string using crypto instead of nanoid
+    return crypto.randomBytes(8).toString('hex');
+  }
 
   async create(
     createInvoiceDto: CreateInvoiceDto,
@@ -74,6 +83,8 @@ export class InvoiceService {
       }
 
       // Create the invoice with draft status if specified
+      // const hash = this.generateUniqueHash();
+
       const invoice = this.invoiceRepository.create({
         dueDate: createInvoiceDto.dueDate,
         client: { id: createInvoiceDto.clientId },
@@ -81,6 +92,7 @@ export class InvoiceService {
         invoiceNumber: `INV-${Date.now()}`,
         totalAmount: 0,
         status: isDraft ? InvoiceStatus.DRAFT : InvoiceStatus.UNPAID,
+        // squadHash: hash,
       });
 
       // Save the invoice first to get the ID
@@ -183,7 +195,7 @@ export class InvoiceService {
 
         // Only generate PDF and payment link if not a draft
         if (!isDraft) {
-          const [pdfPath, paymentLink] = await Promise.all([
+          const [pdfPath, paymentLinkData] = await Promise.all([
             this.pdfService.generateInvoicePdf(completeInvoice),
             this.squadService.createPaymentLink(
               completeInvoice.totalAmount,
@@ -193,8 +205,9 @@ export class InvoiceService {
             ),
           ]);
 
-          // Update invoice with payment link
-          completeInvoice.paymentLink = paymentLink;
+          // Store payment link and hash
+          completeInvoice.paymentLink = paymentLinkData.paymentUrl;
+          completeInvoice.squadTransactionRef = paymentLinkData.squadRef;
           await this.invoiceRepository.save(completeInvoice);
 
           // Send email
@@ -289,7 +302,7 @@ export class InvoiceService {
     amount: number,
   ): Promise<Invoice> {
     const invoice = await this.invoiceRepository.findOne({
-      where: { transactionRef },
+      where: [{ transactionRef }, { squadTransactionRef: transactionRef }],
       relations: ['client'],
     });
 
@@ -297,11 +310,6 @@ export class InvoiceService {
       throw new NotFoundException(
         `Invoice with transaction reference ${transactionRef} not found`,
       );
-    }
-
-    // Verify the amount matches (optional but recommended)
-    if (invoice.totalAmount !== amount) {
-      throw new Error('Payment amount does not match invoice amount');
     }
 
     invoice.status = status;
@@ -333,7 +341,7 @@ export class InvoiceService {
     }
 
     // Generate PDF and payment link
-    const [pdfPath, paymentLink] = await Promise.all([
+    const [pdfPath, paymentData] = await Promise.all([
       this.pdfService.generateInvoicePdf(invoice),
       this.squadService.createPaymentLink(
         invoice.totalAmount,
@@ -345,7 +353,8 @@ export class InvoiceService {
 
     // Update invoice status and payment link
     invoice.status = InvoiceStatus.UNPAID;
-    invoice.paymentLink = paymentLink;
+    invoice.paymentLink = paymentData.paymentUrl;
+    invoice.squadTransactionRef = paymentData.squadRef;
     await this.invoiceRepository.save(invoice);
 
     // Send email
@@ -355,6 +364,35 @@ export class InvoiceService {
       pdfPath,
       invoice.paymentLink,
     );
+
+    return invoice;
+  }
+
+  async updateSquadTransactionRef(
+    originalRef: string,
+    squadRef: string,
+  ): Promise<void> {
+    const invoice = await this.invoiceRepository.findOne({
+      where: { transactionRef: originalRef },
+    });
+
+    if (invoice) {
+      invoice.squadTransactionRef = squadRef;
+      await this.invoiceRepository.save(invoice);
+    }
+  }
+
+  async findByTransactionRef(transactionRef: string): Promise<Invoice> {
+    const invoice = await this.invoiceRepository.findOne({
+      where: [{ transactionRef }, { squadTransactionRef: transactionRef }],
+      relations: ['client'],
+    });
+
+    if (!invoice) {
+      throw new NotFoundException(
+        `Invoice with transaction reference ${transactionRef} not found`,
+      );
+    }
 
     return invoice;
   }

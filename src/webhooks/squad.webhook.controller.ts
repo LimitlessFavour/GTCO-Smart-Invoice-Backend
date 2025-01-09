@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-unused-vars */
 import {
   Controller,
   Post,
@@ -62,55 +63,27 @@ export class SquadWebhookController {
 
     try {
       if (payload.Event === 'charge_successful' && payload.Body) {
-        const {
-          transaction_ref,
-          transaction_status,
-          // eslint-disable-next-line @typescript-eslint/no-unused-vars
-          amount,
-          email,
-          merchant_amount,
-          transaction_type,
-        } = payload.Body;
+        const { transaction_ref, transaction_status, merchant_amount, email } =
+          payload.Body;
 
         this.logger.debug('Processing successful payment:', {
           transactionRef: transaction_ref,
           status: transaction_status,
           amount: merchant_amount,
-          type: transaction_type,
         });
 
-        if (transaction_status === 'Success') {
-          // Update invoice status
-          const invoice = await this.invoiceService.updateInvoiceStatus(
+        if (transaction_status.toLowerCase() === 'success') {
+          await this.invoiceService.updateInvoiceStatus(
             transaction_ref,
             InvoiceStatus.PAID,
             merchant_amount / 100, // Convert from kobo to naira
           );
-
-          // Send payment confirmation email
-          if (invoice) {
-            await this.emailService.sendPaymentConfirmationEmail(
-              email,
-              invoice.client.firstName,
-              invoice.invoiceNumber,
-              merchant_amount / 100,
-            );
-          }
         }
       }
 
       return { received: true };
     } catch (error) {
-      this.logger.error(
-        'Error processing webhook:',
-        {
-          error: error?.message,
-          stack: error?.stack,
-          event: payload?.Event,
-          transactionRef: payload?.TransactionRef,
-        },
-        'handleWebhook',
-      );
+      this.logger.error('Error processing webhook:', error);
       throw new InternalServerErrorException('Failed to process webhook');
     }
   }

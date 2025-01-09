@@ -6,8 +6,6 @@ import { ConfigModule } from '@nestjs/config';
 import { SquadWebhookController } from './squad.webhook.controller';
 
 // Services
-import { SquadService } from '../services/gtco_squad.service';
-import { InvoiceService } from '../invoice/invoice.service';
 import { EmailService } from '../services/email.service';
 import { PdfService } from '../services/pdf.service';
 
@@ -17,13 +15,16 @@ import { InvoiceItem } from '../invoice/invoice-item.entity';
 import { Product } from '../product/entities/product.entity';
 import { Client } from 'src/client/client.entity';
 import { Company } from 'src/company/company.entity';
+import { InvoiceModule } from '../invoice/invoice.module';
+import { SquadService } from 'src/services/gtco_squad.service';
 
 @Module({
   imports: [
-    ConfigModule, // For environment variables
+    ConfigModule,
     TypeOrmModule.forFeature([Invoice, InvoiceItem, Client, Company, Product]),
+    InvoiceModule,
   ],
   controllers: [SquadWebhookController],
-  providers: [SquadService, InvoiceService, EmailService, PdfService],
+  providers: [EmailService, PdfService, SquadService],
 })
 export class WebhookModule {}

@@ -69,4 +69,8 @@ export class Invoice {
   @ApiProperty({ type: () => [InvoiceItem] })
   @OneToMany(() => InvoiceItem, (invoiceItem) => invoiceItem.invoice)
   items: InvoiceItem[];
+
+  @ApiProperty({ description: 'Squad transaction reference', required: false })
+  @Column({ nullable: true })
+  squadTransactionRef: string;
 }
