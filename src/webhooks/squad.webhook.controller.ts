@@ -17,6 +17,8 @@ import { PaymentType } from '../transaction/transaction.entity';
 import { ActivityService } from '../activity/activity.service';
 import { ApiTags, ApiOperation, ApiResponse } from '@nestjs/swagger';
 import { ActivityType } from 'src/activity/activity.entity';
+import { NotificationService } from '../notification/notification.service';
+import { NotificationType } from '../notification/notification.entity';
 
 @ApiTags('Webhooks')
 @Controller('webhooks/squad')
@@ -29,6 +31,7 @@ export class SquadWebhookController {
     private readonly emailService: EmailService,
     private readonly transactionService: TransactionService,
     private readonly activityService: ActivityService,
+    private readonly notificationService: NotificationService,
   ) {}
 
   @Post()
@@ -102,6 +105,19 @@ export class SquadWebhookController {
               paymentType: 'GATEWAY',
             },
           });
+
+          // Send notification
+          await this.notificationService.createNotification(
+            NotificationType.PAYMENT_RECEIVED,
+            invoice.company.id,
+            'Payment Received',
+            `Payment of ₦${(merchant_amount / 100).toLocaleString('en-NG')} received for invoice ${invoice.invoiceNumber}`,
+            {
+              invoiceId: invoice.id,
+              amount: merchant_amount / 100,
+              transactionRef: transaction_ref,
+            },
+          );
         }
       }
 

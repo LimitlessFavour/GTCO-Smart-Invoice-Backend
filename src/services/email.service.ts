@@ -1,7 +1,12 @@
+/* eslint-disable @typescript-eslint/no-unused-vars */
 import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import * as nodemailer from 'nodemailer';
-import { emailTemplates } from './email-templates';
+import {
+  paymentTemplates,
+  invoiceTemplates,
+  authTemplates,
+} from './email-templates/index';
 
 @Injectable()
 export class EmailService {
@@ -38,10 +43,10 @@ export class EmailService {
 
   async sendWelcomeEmail(to: string, name: string): Promise<void> {
     const mailOptions = {
-      from: process.env.EMAIL_USER,
+      from: `"${this.companyName}" <${this.configService.get('EMAIL_USER')}>`,
       to,
       subject: 'Welcome to GTCO SmartInvoice',
-      text: `Hi ${name},\n\nWelcome to GTCO SmartInvoice! We're excited to have you on board.\n\nBest regards,\nThe GTCO Team`,
+      html: authTemplates.welcome({ name, companyName: this.companyName }),
     };
 
     await this.transporter.sendMail(mailOptions);
@@ -52,21 +57,34 @@ export class EmailService {
     name: string,
     pdfPath: string,
     paymentLink: string,
+    invoiceNumber: string,
+    dueDate?: string,
   ): Promise<void> {
     const mailOptions = {
-      from: process.env.EMAIL_USER,
+      from: `"${this.companyName}" <${this.configService.get('EMAIL_USER')}>`,
       to,
-      subject: 'Your Invoice from GTCO SmartInvoice',
-      text: `Hi ${name},\n\nPlease find your invoice attached. You can complete your payment here: ${paymentLink}.\n\nBest regards,\nThe GTCO Team`,
+      subject: `Invoice #${invoiceNumber} from ${this.companyName}`,
+      html: invoiceTemplates.invoiceCreated({
+        name,
+        paymentLink,
+        companyName: this.companyName,
+        invoiceNumber,
+        dueDate,
+      }),
       attachments: [
         {
-          filename: 'invoice.pdf',
+          filename: `invoice-${invoiceNumber}.pdf`,
           path: pdfPath,
         },
       ],
     };
 
-    await this.transporter.sendMail(mailOptions);
+    try {
+      await this.transporter.sendMail(mailOptions);
+    } catch (error) {
+      this.logger.error('Error sending invoice email:', error);
+      throw new Error('Failed to send invoice email');
+    }
   }
 
   async sendPaymentConfirmationEmail(
@@ -79,7 +97,7 @@ export class EmailService {
       from: `"${this.companyName}" <${this.configService.get('EMAIL_USER')}>`,
       to,
       subject: `Payment Confirmed - Invoice #${invoiceNumber}`,
-      html: emailTemplates.paymentConfirmation({
+      html: paymentTemplates.paymentConfirmation({
         name,
         invoiceNumber,
         amount,
@@ -99,6 +117,31 @@ export class EmailService {
       console.error('Error sending payment confirmation email:', error);
       throw new Error('Failed to send payment confirmation email');
     }
+  }
+
+  async sendOverdueInvoiceEmail(
+    to: string,
+    name: string,
+    invoiceNumber: string,
+    amount: number,
+    dueDate: string,
+    paymentLink: string,
+  ): Promise<void> {
+    const mailOptions = {
+      from: `"${this.companyName}" <${this.configService.get('EMAIL_USER')}>`,
+      to,
+      subject: `Invoice #${invoiceNumber} Overdue`,
+      html: invoiceTemplates.overdueInvoice({
+        name,
+        invoiceNumber,
+        amount,
+        dueDate,
+        paymentLink,
+        companyName: this.companyName,
+      }),
+    };
+
+    await this.transporter.sendMail(mailOptions);
   }
 
   // Helper method to format currency

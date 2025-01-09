@@ -19,6 +19,7 @@ import { SurveyResponseDto } from './dto/survey-response.dto';
 import { ActivityService } from '../activity/activity.service';
 import { StorageService } from '../storage/storage.service';
 import { SurveyResponse } from 'src/survey-response/survey-response.entity';
+import { ActivityType } from 'src/activity/activity.entity';
 
 @Injectable()
 export class UserService {
@@ -75,10 +76,13 @@ export class UserService {
 
       // Log activity
       await this.activityService.create({
-        userId: id,
-        action: 'updated_profile',
-        relatedEntity: 'user',
-        relatedEntityId: id,
+        type: ActivityType.USER_UPDATED,
+        entityType: 'USER',
+        entityId: parseInt(id),
+        companyId: user.company.id,
+        metadata: {
+          updatedFields: Object.keys(updateUserDto),
+        },
       });
 
       delete user.password;
@@ -115,10 +119,13 @@ export class UserService {
 
       // Log activity
       await this.activityService.create({
-        userId: id,
-        action: 'completed_user_onboarding',
-        relatedEntity: 'user',
-        relatedEntityId: id,
+        type: ActivityType.USER_ONBOARDED,
+        entityType: 'USER',
+        entityId: parseInt(id),
+        companyId: user.company.id,
+        metadata: {
+          step: user.onboardingStep,
+        },
       });
 
       delete user.password;
@@ -228,10 +235,14 @@ export class UserService {
       // Log activity
       try {
         await this.activityService.create({
-          userId,
-          action: 'completed_company_onboarding',
-          relatedEntity: 'company',
-          relatedEntityId: company.id.toString(),
+          type: ActivityType.COMPANY_CREATED,
+          entityType: 'COMPANY',
+          entityId: company.id,
+          companyId: company.id,
+          metadata: {
+            name: company.name,
+            description: company.description,
+          },
         });
       } catch (activityError) {
         this.logger.error(
@@ -315,10 +326,15 @@ export class UserService {
       // Log activity
       try {
         await this.activityService.create({
-          userId,
-          action: existingSurvey ? 'updated_survey' : 'submitted_survey',
-          relatedEntity: 'survey',
-          relatedEntityId: surveyResponse.id.toString(),
+          type: existingSurvey
+            ? ActivityType.SURVEY_UPDATED
+            : ActivityType.SURVEY_CREATED,
+          entityType: 'SURVEY',
+          entityId: surveyResponse.id,
+          companyId: user.company.id,
+          metadata: {
+            source: surveyResponse.source,
+          },
         });
       } catch (activityError) {
         this.logger.error(

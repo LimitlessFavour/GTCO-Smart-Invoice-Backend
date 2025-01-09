@@ -11,13 +11,30 @@ import { Company } from '../company/company.entity';
 import { Product } from '../product/entities/product.entity';
 import { SquadService } from 'src/services/gtco_squad.service';
 import { TransactionModule } from '../transaction/transaction.module';
+import { ActivityService } from 'src/activity/activity.service';
+import { Activity } from 'src/activity/activity.entity';
+import { NotificationModule } from 'src/notification/notification.module';
 
 @Module({
   imports: [
-    TypeOrmModule.forFeature([Invoice, InvoiceItem, Client, Company, Product]),
+    TypeOrmModule.forFeature([
+      Invoice,
+      InvoiceItem,
+      Client,
+      Company,
+      Product,
+      Activity,
+    ]),
     TransactionModule,
+    NotificationModule,
   ],
-  providers: [InvoiceService, PdfService, EmailService, SquadService],
+  providers: [
+    InvoiceService,
+    PdfService,
+    EmailService,
+    SquadService,
+    ActivityService,
+  ],
   controllers: [InvoiceController],
   exports: [InvoiceService],
 })

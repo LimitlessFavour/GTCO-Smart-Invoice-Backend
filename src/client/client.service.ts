@@ -11,7 +11,10 @@ import { UpdateClientDto } from './dto/update-client.dto';
 import { ClientDetailsDto } from './dto/client-details.dto';
 import { InvoiceStatus } from '../invoice/enums/invoice-status.enum';
 import { Company } from '../company/company.entity';
-// import { User } from '../user/user.entity';
+import { NotificationService } from '../notification/notification.service';
+import { NotificationType } from '../notification/notification.entity';
+import { ActivityService } from '../activity/activity.service';
+import { ActivityType } from '../activity/activity.entity';
 
 @Injectable()
 export class ClientService {
@@ -20,6 +23,8 @@ export class ClientService {
     private clientRepository: Repository<Client>,
     @InjectRepository(Company)
     private companyRepository: Repository<Company>,
+    private readonly notificationService: NotificationService,
+    private readonly activityService: ActivityService,
   ) {}
 
   async create(
@@ -30,6 +35,19 @@ export class ClientService {
       ...createClientDto,
       companyId,
     });
+
+    // Send notification for new client
+    await this.notificationService.createNotification(
+      NotificationType.CLIENT_CREATED,
+      companyId,
+      'New Client Added',
+      `New client ${client.firstName} ${client.lastName} has been added`,
+      {
+        clientId: client.id,
+        email: client.email,
+      },
+    );
+
     return this.clientRepository.save(client);
   }
 
@@ -92,9 +110,26 @@ export class ClientService {
   }
 
   async update(id: number, updateClientDto: UpdateClientDto): Promise<Client> {
-    const client = await this.findOneEntity(id);
+    const client = await this.findOne(id);
+
+    // Update client
     Object.assign(client, updateClientDto);
-    return this.clientRepository.save(client);
+    const updatedClient = await this.clientRepository.save(client);
+
+    // Record activity
+    await this.activityService.create({
+      type: ActivityType.CLIENT_UPDATED,
+      entityType: 'CLIENT',
+      entityId: client.id,
+      companyId: 0,
+      metadata: {
+        updatedFields: Object.keys(updateClientDto),
+        email: client.email,
+        name: `${client.firstName} ${client.lastName}`,
+      },
+    });
+
+    return updatedClient;
   }
 
   async remove(id: number): Promise<void> {

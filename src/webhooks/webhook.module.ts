@@ -1,30 +1,35 @@
 import { Module } from '@nestjs/common';
-import { TypeOrmModule } from '@nestjs/typeorm';
-import { ConfigModule } from '@nestjs/config';
-
-// Controllers
 import { SquadWebhookController } from './squad.webhook.controller';
-
-// Services
+import { SquadService } from '../services/gtco_squad.service';
+import { InvoiceService } from '../invoice/invoice.service';
 import { EmailService } from '../services/email.service';
-import { PdfService } from '../services/pdf.service';
-
-// Entities
+import { TransactionModule } from '../transaction/transaction.module';
+import { ActivityModule } from '../activity/activity.module';
+import { NotificationModule } from '../notification/notification.module';
+import { TypeOrmModule } from '@nestjs/typeorm';
 import { Invoice } from '../invoice/invoice.entity';
 import { InvoiceItem } from '../invoice/invoice-item.entity';
+import { Client } from '../client/client.entity';
+import { Company } from '../company/company.entity';
 import { Product } from '../product/entities/product.entity';
-import { Client } from 'src/client/client.entity';
-import { Company } from 'src/company/company.entity';
-import { InvoiceModule } from '../invoice/invoice.module';
-import { SquadService } from 'src/services/gtco_squad.service';
+import { Activity } from '../activity/activity.entity';
+import { PdfService } from '../services/pdf.service';
 
 @Module({
   imports: [
-    ConfigModule,
-    TypeOrmModule.forFeature([Invoice, InvoiceItem, Client, Company, Product]),
-    InvoiceModule,
+    TypeOrmModule.forFeature([
+      Invoice,
+      InvoiceItem,
+      Client,
+      Company,
+      Product,
+      Activity,
+    ]),
+    TransactionModule,
+    ActivityModule,
+    NotificationModule,
   ],
   controllers: [SquadWebhookController],
-  providers: [EmailService, PdfService, SquadService],
+  providers: [SquadService, InvoiceService, EmailService, PdfService],
 })
 export class WebhookModule {}

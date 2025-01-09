@@ -23,6 +23,10 @@ import { Product } from 'src/product/entities/product.entity';
 import * as crypto from 'crypto';
 import { TransactionService } from '../transaction/transaction.service';
 import { PaymentType } from '../transaction/transaction.entity';
+import { NotificationService } from 'src/notification/notification.service';
+import { NotificationType } from 'src/notification/notification.entity';
+import { ActivityService } from 'src/activity/activity.service';
+import { ActivityType } from 'src/activity/activity.entity';
 
 @Injectable()
 export class InvoiceService {
@@ -44,6 +48,8 @@ export class InvoiceService {
     @Inject(forwardRef(() => SquadService))
     private squadService: SquadService,
     private readonly transactionService: TransactionService,
+    private readonly notificationService: NotificationService,
+    private readonly activityService: ActivityService,
   ) {}
 
   private generateUniqueHash(): string {
@@ -215,11 +221,32 @@ export class InvoiceService {
 
           // Send email
           await this.emailService.sendInvoiceEmail(
-            completeInvoice.client.email,
-            completeInvoice.client.firstName,
+            invoice.client.email,
+            invoice.client.firstName,
             pdfPath,
-            completeInvoice.paymentLink,
+            invoice.paymentLink,
+            invoice.invoiceNumber,
+            invoice.dueDate?.toLocaleDateString('en-NG', {
+              weekday: 'long',
+              year: 'numeric',
+              month: 'long',
+              day: 'numeric',
+            }),
           );
+        }
+
+        if (!isDraft) {
+          await this.activityService.create({
+            type: ActivityType.INVOICE_CREATED,
+            entityType: 'INVOICE',
+            entityId: savedInvoice.id,
+            companyId: savedInvoice.company.id,
+            metadata: {
+              invoiceNumber: savedInvoice.invoiceNumber,
+              amount: savedInvoice.totalAmount,
+              clientId: savedInvoice.client.id,
+            },
+          });
         }
 
         return this.findOne(completeInvoice.id);
@@ -378,7 +405,26 @@ export class InvoiceService {
       invoice.client.firstName,
       pdfPath,
       invoice.paymentLink,
+      invoice.invoiceNumber,
+      invoice.dueDate?.toLocaleDateString('en-NG', {
+        weekday: 'long',
+        year: 'numeric',
+        month: 'long',
+        day: 'numeric',
+      }),
     );
+
+    await this.activityService.create({
+      type: ActivityType.INVOICE_FINALIZED,
+      entityType: 'INVOICE',
+      entityId: invoice.id,
+      companyId: invoice.company.id,
+      metadata: {
+        invoiceNumber: invoice.invoiceNumber,
+        amount: invoice.totalAmount,
+        clientId: invoice.client.id,
+      },
+    });
 
     return invoice;
   }
@@ -458,6 +504,33 @@ export class InvoiceService {
     ) {
       invoice.status = InvoiceStatus.OVERDUE;
       await this.invoiceRepository.save(invoice);
+
+      // Send overdue notification
+      await this.notificationService.createNotification(
+        NotificationType.INVOICE_OVERDUE,
+        invoice.company.id,
+        'Invoice Overdue',
+        `Invoice ${invoice.invoiceNumber} for ${invoice.client.firstName} ${invoice.client.lastName} is now overdue`,
+        {
+          invoiceId: invoice.id,
+          dueDate: invoice.dueDate.toISOString(),
+          amount: invoice.totalAmount,
+          clientId: invoice.client.id,
+        },
+      );
+      await this.emailService.sendOverdueInvoiceEmail(
+        invoice.client.email,
+        invoice.client.firstName,
+        invoice.invoiceNumber,
+        invoice.totalAmount,
+        invoice.dueDate.toLocaleDateString('en-NG', {
+          weekday: 'long',
+          year: 'numeric',
+          month: 'long',
+          day: 'numeric',
+        }),
+        invoice.paymentLink,
+      );
     }
   }
 }

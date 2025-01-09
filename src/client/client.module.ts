@@ -10,6 +10,8 @@ import { ClientBulkUploadService } from './services/client-bulk-upload.service';
 import { ClientFileProcessingService } from './services/client-file-processing.service';
 import { CompanyModule } from '../company/company.module';
 import { Company } from '../company/company.entity';
+import { ActivityModule } from '../activity/activity.module';
+import { NotificationModule } from '../notification/notification.module';
 
 @Module({
   imports: [
@@ -20,6 +22,8 @@ import { Company } from '../company/company.entity';
       Company,
     ]),
     CompanyModule,
+    ActivityModule,
+    NotificationModule,
   ],
   controllers: [ClientController, ClientBulkUploadController],
   providers: [

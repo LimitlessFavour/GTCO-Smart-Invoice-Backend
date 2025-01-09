@@ -63,8 +63,5 @@ test-webhook.js
 #generated invoices
 invoices
 
-# payment completion implementation plan
-payment_completion_implementation_plan.txt
-
-# notifications implementation plan
-notifications_implementation_plan.txt
+#plans and discussions
+plans/

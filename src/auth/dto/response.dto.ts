@@ -57,3 +57,93 @@ export class ForgotPasswordResponseDto {
   })
   message: string;
 }
+
+export class RefreshTokenResponseDto {
+  @ApiProperty({
+    example: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...',
+    description: 'New JWT access token',
+  })
+  access_token: string;
+
+  @ApiProperty({
+    example: 'uuid-v4-token',
+    description: 'New refresh token',
+  })
+  refresh_token: string;
+
+  @ApiProperty({
+    example: {
+      id: 'user_id',
+      email: 'user@example.com',
+    },
+    description: 'User information',
+  })
+  user: Record<string, any>;
+}
+
+export class LogoutResponseDto {
+  @ApiProperty({
+    example: 'Logged out successfully',
+    description: 'Success message',
+  })
+  message: string;
+
+  @ApiProperty({
+    example: 200,
+    description: 'Status code',
+  })
+  statusCode: number;
+}
+
+export class EmailVerificationResponseDto {
+  @ApiProperty({
+    example: 'Email verified successfully',
+    description: 'Success message',
+  })
+  message: string;
+
+  @ApiProperty({
+    example: 200,
+    description: 'Status code',
+  })
+  statusCode: number;
+}
+
+export class OAuthCallbackResponseDto {
+  @ApiProperty({
+    example: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...',
+    description: 'JWT access token',
+  })
+  access_token: string;
+
+  @ApiProperty({
+    example: 'uuid-v4-token',
+    description: 'Refresh token',
+  })
+  refresh_token: string;
+
+  @ApiProperty({
+    example: {
+      id: 'user_id',
+      email: 'user@example.com',
+    },
+    description: 'User information',
+  })
+  user: Record<string, any>;
+}
+
+export class AppleOAuthResponseDto extends OAuthResponseDto {
+  @ApiProperty({
+    example: 'apple',
+    description: 'OAuth provider',
+  })
+  provider: string;
+}
+
+export class GoogleOAuthResponseDto extends OAuthResponseDto {
+  @ApiProperty({
+    example: 'google',
+    description: 'OAuth provider',
+  })
+  provider: string;
+}

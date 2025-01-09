@@ -14,6 +14,9 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { User } from '../user/user.entity';
 import { Logger } from '@nestjs/common';
+import { v4 as uuidv4 } from 'uuid';
+import { add } from 'date-fns';
+import { RefreshToken } from './entities/refresh-token.entity';
 
 @Injectable()
 export class AuthService {
@@ -25,6 +28,8 @@ export class AuthService {
     private jwtService: JwtService,
     @InjectRepository(User)
     private readonly userRepository: Repository<User>,
+    @InjectRepository(RefreshToken)
+    private refreshTokenRepository: Repository<RefreshToken>,
   ) {
     this.supabase = createClient(
       this.configService.get<string>('SUPABASE_URL'),
@@ -60,19 +65,7 @@ export class AuthService {
         }
       }
 
-      const payload = {
-        sub: data.user.id,
-        email: data.user.email,
-        roles: ['user'],
-      };
-
-      return {
-        access_token: this.jwtService.sign(payload),
-        user: {
-          id: data.user.id,
-          email: data.user.email,
-        },
-      };
+      return this.generateTokens(data.user);
     } catch (error) {
       // Re-throw NestJS HTTP exceptions
       if (
@@ -278,12 +271,152 @@ export class AuthService {
         statusCode: 200,
       };
     } catch (error) {
+      this.logger.error(
+        'Email verification error',
+        error?.stack || 'No stack trace',
+        'verifyEmail',
+      );
+
       if (error instanceof BadRequestException) {
         throw error;
       }
 
       throw new InternalServerErrorException({
         message: 'Failed to verify email',
+        statusCode: 500,
+      });
+    }
+  }
+
+  private async generateTokens(user: any) {
+    const payload = {
+      sub: user.id,
+      email: user.email,
+      roles: ['user'],
+    };
+
+    const accessToken = this.jwtService.sign(payload, { expiresIn: '15m' });
+    const refreshToken = await this.createRefreshToken(user.id);
+
+    return {
+      access_token: accessToken,
+      refresh_token: refreshToken.token,
+      user: {
+        id: user.id,
+        email: user.email,
+      },
+    };
+  }
+
+  private async createRefreshToken(userId: string): Promise<RefreshToken> {
+    const token = uuidv4();
+    const refreshToken = this.refreshTokenRepository.create({
+      userId,
+      token,
+      expiresAt: add(new Date(), { days: 7 }),
+    });
+
+    return this.refreshTokenRepository.save(refreshToken);
+  }
+
+  async refreshAccessToken(refreshToken: string) {
+    const token = await this.refreshTokenRepository.findOne({
+      where: { token: refreshToken, isRevoked: false },
+      relations: ['user'],
+    });
+
+    if (!token || new Date() > token.expiresAt) {
+      throw new UnauthorizedException('Invalid refresh token');
+    }
+
+    // Revoke the used refresh token
+    await this.refreshTokenRepository.update(token.id, { isRevoked: true });
+
+    // Generate new tokens
+    return this.generateTokens(token.user);
+  }
+
+  async handleOAuthCallback(provider: string, code: string) {
+    try {
+      const { data, error } =
+        await this.supabase.auth.exchangeCodeForSession(code);
+
+      if (error) {
+        throw new BadRequestException(
+          `Failed to authenticate with ${provider}`,
+        );
+      }
+
+      // Create or update user in our database
+      let user = await this.userRepository.findOne({
+        where: { id: data.user.id },
+        relations: ['company'],
+      });
+
+      if (!user) {
+        user = this.userRepository.create({
+          id: data.user.id,
+          email: data.user.email,
+          firstName: data.user.user_metadata?.full_name?.split(' ')[0] || '',
+          lastName: data.user.user_metadata?.full_name?.split(' ')[1] || '',
+        });
+        await this.userRepository.save(user);
+      }
+
+      return this.generateTokens(user);
+    } catch (error) {
+      this.logger.error(
+        `OAuth callback error for ${provider}`,
+        error?.stack || 'No stack trace',
+        'handleOAuthCallback',
+      );
+
+      if (error instanceof BadRequestException) {
+        throw error;
+      }
+
+      throw new InternalServerErrorException({
+        message: 'Failed to complete authentication',
+        statusCode: 500,
+      });
+    }
+  }
+
+  async logout(refreshToken: string) {
+    try {
+      // Revoke the refresh token
+      await this.refreshTokenRepository.update(
+        { token: refreshToken },
+        { isRevoked: true },
+      );
+
+      // Sign out from Supabase
+      const { error } = await this.supabase.auth.signOut();
+
+      if (error) {
+        throw new BadRequestException({
+          message: 'Failed to logout',
+          statusCode: 400,
+        });
+      }
+
+      return {
+        message: 'Logged out successfully',
+        statusCode: 200,
+      };
+    } catch (error) {
+      this.logger.error(
+        'Logout error',
+        error?.stack || 'No stack trace',
+        'logout',
+      );
+
+      if (error instanceof BadRequestException) {
+        throw error;
+      }
+
+      throw new InternalServerErrorException({
+        message: 'Failed to logout',
         statusCode: 500,
       });
     }
