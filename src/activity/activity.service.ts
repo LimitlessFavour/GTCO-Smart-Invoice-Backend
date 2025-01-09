@@ -1,13 +1,14 @@
-import { Injectable, InternalServerErrorException } from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
-import { Activity } from './activity.entity';
+import { Activity, ActivityType } from './activity.entity';
 
-interface CreateActivityParams {
-  userId: string;
-  action: string;
-  relatedEntity: string;
-  relatedEntityId: string;
+interface CreateActivityDto {
+  type: ActivityType;
+  entityType: string;
+  entityId: number;
+  companyId: number;
+  metadata?: Record<string, any>;
 }
 
 @Injectable()
@@ -17,41 +18,38 @@ export class ActivityService {
     private readonly activityRepository: Repository<Activity>,
   ) {}
 
-  async create(params: CreateActivityParams): Promise<Activity> {
-    try {
-      const activity = this.activityRepository.create({
-        userId: params.userId,
-        action: params.action,
-        relatedEntity: params.relatedEntity,
-        relatedEntityId: params.relatedEntityId,
-      });
-
-      return await this.activityRepository.save(activity);
-    } catch (error: any) {
-      throw new InternalServerErrorException({
-        message: 'Failed to log activity: ' + error.message,
-        statusCode: 500,
-      });
-    }
+  async create(createActivityDto: CreateActivityDto): Promise<Activity> {
+    const activity = this.activityRepository.create(createActivityDto);
+    return await this.activityRepository.save(activity);
   }
 
-  async findByUser(userId: string): Promise<Activity[]> {
-    try {
-      const activities = await this.activityRepository.find({
-        where: { userId },
-        order: { createdAt: 'DESC' },
-      });
+  async findByCompany(
+    companyId: number,
+    startDate?: Date,
+    endDate?: Date,
+  ): Promise<Activity[]> {
+    const query = this.activityRepository
+      .createQueryBuilder('activity')
+      .where('activity.companyId = :companyId', { companyId })
+      .orderBy('activity.createdAt', 'DESC');
 
-      if (!activities) {
-        return [];
-      }
-
-      return activities;
-    } catch (error: any) {
-      throw new InternalServerErrorException({
-        message: 'Failed to fetch user activities: ' + error.message,
-        statusCode: 500,
+    if (startDate && endDate) {
+      query.andWhere('activity.createdAt BETWEEN :startDate AND :endDate', {
+        startDate,
+        endDate,
       });
     }
+
+    return query.getMany();
+  }
+
+  async findByEntityType(
+    companyId: number,
+    entityType: string,
+  ): Promise<Activity[]> {
+    return this.activityRepository.find({
+      where: { companyId, entityType },
+      order: { createdAt: 'DESC' },
+    });
   }
 }

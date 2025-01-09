@@ -141,4 +141,11 @@ export class InvoiceController {
   async remove(@Param('id') id: string) {
     return this.invoiceService.remove(+id);
   }
+
+  @Post(':id/mark-paid')
+  @ApiOperation({ summary: 'Mark invoice as paid manually' })
+  @ApiResponse({ status: 200, type: Invoice })
+  async markAsPaid(@Param('id') id: string) {
+    return this.invoiceService.markAsPaid(+id, false);
+  }
 }

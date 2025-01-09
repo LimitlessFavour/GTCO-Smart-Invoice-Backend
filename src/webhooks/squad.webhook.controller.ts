@@ -12,7 +12,11 @@ import { SquadService } from '../services/gtco_squad.service';
 import { InvoiceService } from '../invoice/invoice.service';
 import { InvoiceStatus } from 'src/invoice/enums/invoice-status.enum';
 import { EmailService } from 'src/services/email.service';
+import { TransactionService } from '../transaction/transaction.service';
+import { PaymentType } from '../transaction/transaction.entity';
+import { ActivityService } from '../activity/activity.service';
 import { ApiTags, ApiOperation, ApiResponse } from '@nestjs/swagger';
+import { ActivityType } from 'src/activity/activity.entity';
 
 @ApiTags('Webhooks')
 @Controller('webhooks/squad')
@@ -23,6 +27,8 @@ export class SquadWebhookController {
     private readonly squadService: SquadService,
     private readonly invoiceService: InvoiceService,
     private readonly emailService: EmailService,
+    private readonly transactionService: TransactionService,
+    private readonly activityService: ActivityService,
   ) {}
 
   @Post()
@@ -63,21 +69,39 @@ export class SquadWebhookController {
 
     try {
       if (payload.Event === 'charge_successful' && payload.Body) {
-        const { transaction_ref, transaction_status, merchant_amount, email } =
+        const { transaction_ref, transaction_status, merchant_amount } =
           payload.Body;
 
-        this.logger.debug('Processing successful payment:', {
-          transactionRef: transaction_ref,
-          status: transaction_status,
-          amount: merchant_amount,
-        });
-
         if (transaction_status.toLowerCase() === 'success') {
-          await this.invoiceService.updateInvoiceStatus(
-            transaction_ref,
-            InvoiceStatus.PAID,
-            merchant_amount / 100, // Convert from kobo to naira
-          );
+          // Get invoice details
+          const invoice =
+            await this.invoiceService.findByTransactionRef(transaction_ref);
+
+          // Create transaction record
+          await this.transactionService.create({
+            amount: merchant_amount / 100, // Convert from kobo to naira
+            invoiceId: invoice.id,
+            clientId: invoice.client.id,
+            companyId: invoice.company.id,
+            paymentType: PaymentType.GATEWAY,
+            paymentReference: transaction_ref,
+          });
+
+          // Update invoice status
+          await this.invoiceService.markAsPaid(invoice.id, true);
+
+          // Record activity
+          await this.activityService.create({
+            type: ActivityType.PAYMENT_RECEIVED,
+            entityId: invoice.id,
+            entityType: 'INVOICE',
+            companyId: invoice.company.id,
+            metadata: {
+              amount: merchant_amount / 100,
+              transactionRef: transaction_ref,
+              paymentType: 'GATEWAY',
+            },
+          });
         }
       }
 

@@ -5,6 +5,7 @@ import {
   ManyToOne,
   OneToMany,
   JoinColumn,
+  CreateDateColumn,
 } from 'typeorm';
 import { Company } from '../company/company.entity';
 import { Client } from '../client/client.entity';
@@ -73,4 +74,7 @@ export class Invoice {
   @ApiProperty({ description: 'Squad transaction reference', required: false })
   @Column({ nullable: true })
   squadTransactionRef: string;
+
+  @CreateDateColumn()
+  createdAt: Date;
 }

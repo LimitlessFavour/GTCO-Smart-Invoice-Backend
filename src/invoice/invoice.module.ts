@@ -10,10 +10,12 @@ import { Client } from '../client/client.entity';
 import { Company } from '../company/company.entity';
 import { Product } from '../product/entities/product.entity';
 import { SquadService } from 'src/services/gtco_squad.service';
+import { TransactionModule } from '../transaction/transaction.module';
 
 @Module({
   imports: [
     TypeOrmModule.forFeature([Invoice, InvoiceItem, Client, Company, Product]),
+    TransactionModule,
   ],
   providers: [InvoiceService, PdfService, EmailService, SquadService],
   controllers: [InvoiceController],

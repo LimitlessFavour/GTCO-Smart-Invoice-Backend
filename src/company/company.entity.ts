@@ -12,6 +12,7 @@ import { Invoice } from '../invoice/invoice.entity';
 import { User } from '../user/user.entity';
 import { Client } from '../client/client.entity';
 import { Product } from '../product/entities/product.entity';
+import { Transaction } from '../transaction/transaction.entity';
 
 @Entity('companies')
 export class Company {
@@ -44,6 +45,15 @@ export class Company {
 
   @OneToMany(() => Product, (product) => product.company)
   products: Product[];
+
+  @Column('decimal', { precision: 10, scale: 2, default: 0 })
+  totalRevenue: number;
+
+  @Column('decimal', { precision: 10, scale: 2, default: 0 })
+  withdrawableRevenue: number;
+
+  @OneToMany(() => Transaction, (transaction) => transaction.company)
+  transactions: Transaction[];
 
   // Timestamps
   @CreateDateColumn()

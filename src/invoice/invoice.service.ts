@@ -21,6 +21,8 @@ import { Client } from 'src/client/client.entity';
 import { Company } from 'src/company/company.entity';
 import { Product } from 'src/product/entities/product.entity';
 import * as crypto from 'crypto';
+import { TransactionService } from '../transaction/transaction.service';
+import { PaymentType } from '../transaction/transaction.entity';
 
 @Injectable()
 export class InvoiceService {
@@ -41,6 +43,7 @@ export class InvoiceService {
     private emailService: EmailService,
     @Inject(forwardRef(() => SquadService))
     private squadService: SquadService,
+    private readonly transactionService: TransactionService,
   ) {}
 
   private generateUniqueHash(): string {
@@ -250,9 +253,18 @@ export class InvoiceService {
   }
 
   async findAll(): Promise<Invoice[]> {
-    return this.invoiceRepository.find({
+    const invoices = await this.invoiceRepository.find({
       relations: ['items', 'client', 'company'],
     });
+
+    // Check each invoice for overdue status
+    await Promise.all(
+      invoices.map(async (invoice) => {
+        await this.checkOverdueStatus(invoice);
+      }),
+    );
+
+    return invoices;
   }
 
   async findOne(id: number): Promise<Invoice> {
@@ -260,9 +272,12 @@ export class InvoiceService {
       where: { id },
       relations: ['items', 'client', 'company'],
     });
+
     if (!invoice) {
       throw new NotFoundException(`Invoice with ID ${id} not found`);
     }
+
+    await this.checkOverdueStatus(invoice);
     return invoice;
   }
 
@@ -395,5 +410,54 @@ export class InvoiceService {
     }
 
     return invoice;
+  }
+
+  async markAsPaid(
+    id: number,
+    isGatewayPayment: boolean = false,
+  ): Promise<Invoice> {
+    const invoice = await this.findOne(id);
+
+    if (invoice.status === InvoiceStatus.PAID) {
+      throw new BadRequestException('Invoice is already paid');
+    }
+
+    // Create transaction record
+    await this.transactionService.create({
+      amount: invoice.totalAmount,
+      invoiceId: invoice.id,
+      clientId: invoice.client.id,
+      companyId: invoice.company.id,
+      paymentType: isGatewayPayment ? PaymentType.GATEWAY : PaymentType.MANUAL,
+      paymentReference: isGatewayPayment
+        ? invoice.squadTransactionRef
+        : undefined,
+    });
+
+    // Update invoice status
+    invoice.status = InvoiceStatus.PAID;
+    invoice.paidAt = new Date();
+    await this.invoiceRepository.save(invoice);
+
+    // Send confirmation email
+    await this.emailService.sendPaymentConfirmationEmail(
+      invoice.client.email,
+      invoice.client.firstName,
+      invoice.invoiceNumber,
+      invoice.totalAmount,
+    );
+
+    return invoice;
+  }
+
+  async checkOverdueStatus(invoice: Invoice): Promise<void> {
+    if (
+      invoice.status === InvoiceStatus.UNPAID &&
+      invoice.dueDate &&
+      new Date() > invoice.dueDate
+    ) {
+      invoice.status = InvoiceStatus.OVERDUE;
+      await this.invoiceRepository.save(invoice);
+    }
   }
 }
