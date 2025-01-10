@@ -6,7 +6,7 @@ import {
   ManyToOne,
 } from 'typeorm';
 import { Invoice } from './invoice.entity';
-import { Product } from '../product/product.entity';
+import { Product } from '../product/entities/product.entity';
 
 @Entity('invoice_items')
 export class InvoiceItem {

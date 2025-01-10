@@ -1,12 +1,22 @@
 import { Module } from '@nestjs/common';
-import { ProductService } from './product.service';
-import { ProductController } from './product.controller';
 import { TypeOrmModule } from '@nestjs/typeorm';
-import { Product } from './product.entity';
+import { ProductController } from './controllers/product.controller';
+import { ProductService } from './services/product.service';
+import { Product } from './entities/product.entity';
+import { BulkUploadJob } from './entities/bulk-upload-job.entity';
+import { BulkUploadProduct } from './entities/bulk-upload-product.entity';
+import { BulkUploadController } from './controllers/bulk-upload.controller';
+import { BulkUploadService } from './services/bulk-upload.service';
+import { FileProcessingService } from './services/file-processing.service';
+import { StorageModule } from '../storage/storage.module';
 
 @Module({
-  imports: [TypeOrmModule.forFeature([Product])],
-  providers: [ProductService],
-  controllers: [ProductController],
+  imports: [
+    TypeOrmModule.forFeature([Product, BulkUploadJob, BulkUploadProduct]),
+    StorageModule,
+  ],
+  controllers: [ProductController, BulkUploadController],
+  providers: [ProductService, BulkUploadService, FileProcessingService],
+  exports: [ProductService],
 })
 export class ProductModule {}

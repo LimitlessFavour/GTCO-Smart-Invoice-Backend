@@ -1,0 +1,55 @@
+Example:
+Authorization: Bearer sandbox_sk_94f2b798466408ef4d19e848ee1a4d1a3e93f104046f
+
+POST https://sandbox-api-d.squadco.com/transaction/initiate
+
+This endpoint returns a checkout URL that when visited calls up the modal with the various payment channel.
+
+POST https://sandbox-api-d.squadco.com/transaction/initiate
+
+
+Sample Request
+{
+    "amount":43000,
+    "email":"henimastic@gmail.com",
+    "currency":"NGN",
+    "initiate_type": "inline",
+    "transaction_ref":"4678388588350909090AH",
+    "callback_url":"http://squadco.com"
+}
+
+sample response - 200:
+{
+    "status": 200,
+    "message": "success",
+    "data": {
+        "auth_url": null,
+        "access_token": null,
+        "merchant_info": {
+            "merchant_response": null,
+            "merchant_name": null,
+            "merchant_logo": null,
+            "merchant_id": "SBN1EBZEQ8"
+        },
+        "currency": "NGN",
+        "recurring": {
+            "frequency": null,
+            "duration": null,
+            "type": 0,
+            "plan_code": null,
+            "customer_name": null
+        },
+        "is_recurring": false,
+        "plan_code": null,
+        "callback_url": "http://squadco.com",
+        "transaction_ref": "4678388588350909090AH",
+        "transaction_memo": null,
+        "transaction_amount": 43000,
+        "authorized_channels": [
+            "card",
+            "ussd",
+            "bank"
+        ],
+        "checkout_url": "https://sandbox-pay.squadco.com/4678388588350909090AH"
+    }
+}

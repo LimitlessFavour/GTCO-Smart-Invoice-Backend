@@ -3,23 +3,74 @@ import { AppModule } from './app.module';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import { Request, Response, NextFunction } from 'express';
 import * as yaml from 'js-yaml';
-// import { ApiOperation, ApiResponse, ApiQuery } from '@nestjs/swagger';
 
 async function bootstrap() {
-  const app = await NestFactory.create(AppModule);
+  const app = await NestFactory.create(AppModule, {
+    logger: ['error', 'warn', 'debug', 'log', 'verbose'],
+  });
 
   // Swagger configuration
   const config = new DocumentBuilder()
     .setTitle('GTCO Smart Invoice API')
     .setDescription('API documentation for GTCO Smart Invoice')
     .setVersion('1.0')
-    .addTag('Schema', 'API Schema operations')
-    .addTag('Auth', '1')
-    .addTag('User', '2')
-    .addTag('Client', '3')
-    .addTag('Invoice', '4')
-    .addTag('Product', '5')
-    .addTag('Company', '6')
+    // Core System & Authentication
+    .addTag(
+      'Schema',
+      'API Schema, Documentation Operations and OpenAPI Specifications',
+    )
+    .addTag(
+      'Auth',
+      'Authentication, Authorization, OAuth2 Integration and Token Management',
+    )
+
+    // User & Company Management
+    .addTag(
+      'User',
+      'User Account Management, Profile Settings and Onboarding Flow',
+    )
+    .addTag(
+      'Company',
+      'Company Profile, Business Settings and Organization Management',
+    )
+
+    // Core Business Operations
+    .addTag(
+      'Client',
+      'Client Management, Contact Information and Client Relationships',
+    )
+    .addTag(
+      'Product',
+      'Product Catalog, Inventory Management and Pricing Configuration',
+    )
+    .addTag(
+      'Invoice',
+      'Invoice Creation, Management, Payment Processing and PDF Generation',
+    )
+    .addTag(
+      'Transactions',
+      'Payment Transactions, Financial Records and Transaction History',
+    )
+
+    // Analytics & Reporting
+    .addTag(
+      'Analytics',
+      'Business Intelligence, Financial Analytics and Performance Metrics Dashboard',
+    )
+
+    // Supporting Features
+    .addTag(
+      'Activities',
+      'System Activity Logs, Audit Trail and User Action History',
+    )
+    .addTag(
+      'Notifications',
+      'Push Notifications, Email Alerts and Communication Preferences',
+    )
+    .addTag(
+      'Webhooks',
+      'Payment Gateway Integration, Webhook Handlers and External System Events',
+    )
     .addBearerAuth()
     .build();
 
