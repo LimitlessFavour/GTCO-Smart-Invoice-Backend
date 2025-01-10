@@ -15,15 +15,7 @@ export class EmailService {
   private readonly logger = new Logger(EmailService.name);
 
   constructor(private configService: ConfigService) {
-    this.transporter = nodemailer.createTransport({
-      host: this.configService.get('EMAIL_HOST'),
-      port: this.configService.get('EMAIL_PORT'),
-      secure: false, // upgrade later with STARTTLS
-      auth: {
-        user: this.configService.get('EMAIL_USER'),
-        pass: this.configService.get('EMAIL_PASSWORD'),
-      },
-    });
+    this.initializeTransporter();
 
     // Verify connection configuration
     this.transporter.verify((error, success) => {
@@ -41,9 +33,34 @@ export class EmailService {
     );
   }
 
+  private async initializeTransporter() {
+    try {
+      this.transporter = nodemailer.createTransport({
+        host: this.configService.get('SMTP_HOST'),
+        port: this.configService.get('SMTP_PORT'),
+        secure: false, // true for 465, false for other ports
+        auth: {
+          user: this.configService.get('SMTP_USER'),
+          pass: this.configService.get('SMTP_PASSWORD'),
+        },
+        // Add timeout settings
+        tls: {
+          rejectUnauthorized: false,
+        },
+        pool: true, // use pooled connections
+        maxConnections: 5,
+        maxMessages: 100,
+        rateDelta: 1000,
+        rateLimit: 5,
+      });
+    } catch (error) {
+      this.logger.error('Failed to initialize email transporter:', error);
+    }
+  }
+
   async sendWelcomeEmail(to: string, name: string): Promise<void> {
     const mailOptions = {
-      from: `"${this.companyName}" <${this.configService.get('EMAIL_USER')}>`,
+      from: `"${this.companyName}" <${this.configService.get('SMTP_USER')}>`,
       to,
       subject: 'Welcome to GTCO SmartInvoice',
       html: authTemplates.welcome({ name, companyName: this.companyName }),
@@ -61,7 +78,7 @@ export class EmailService {
     dueDate?: string,
   ): Promise<void> {
     const mailOptions = {
-      from: `"${this.companyName}" <${this.configService.get('EMAIL_USER')}>`,
+      from: `"${this.companyName}" <${this.configService.get('SMTP_USER')}>`,
       to,
       subject: `Invoice #${invoiceNumber} from ${this.companyName}`,
       html: invoiceTemplates.invoiceCreated({
@@ -94,7 +111,7 @@ export class EmailService {
     amount: number,
   ): Promise<void> {
     const mailOptions = {
-      from: `"${this.companyName}" <${this.configService.get('EMAIL_USER')}>`,
+      from: `"${this.companyName}" <${this.configService.get('SMTP_USER')}>`,
       to,
       subject: `Payment Confirmed - Invoice #${invoiceNumber}`,
       html: paymentTemplates.paymentConfirmation({
@@ -128,7 +145,7 @@ export class EmailService {
     paymentLink: string,
   ): Promise<void> {
     const mailOptions = {
-      from: `"${this.companyName}" <${this.configService.get('EMAIL_USER')}>`,
+      from: `"${this.companyName}" <${this.configService.get('SMTP_USER')}>`,
       to,
       subject: `Invoice #${invoiceNumber} Overdue`,
       html: invoiceTemplates.overdueInvoice({
@@ -150,7 +167,7 @@ export class EmailService {
     resetLink: string,
   ): Promise<void> {
     const mailOptions = {
-      from: `"${this.companyName}" <${this.configService.get('EMAIL_USER')}>`,
+      from: `"${this.companyName}" <${this.configService.get('SMTP_USER')}>`,
       to,
       subject: 'Reset Your Password - GTCO SmartInvoice',
       html: authTemplates.resetPassword({ name, resetLink }),

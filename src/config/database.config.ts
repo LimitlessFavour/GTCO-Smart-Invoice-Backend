@@ -17,4 +17,12 @@ export const getDatabaseConfig = (
       : false,
   synchronize: configService.get('NODE_ENV') !== 'production',
   autoLoadEntities: true,
+  logging: ['error', 'warn', 'query'],
+  logger: 'advanced-console',
+  maxQueryExecutionTime: 1000,
+  extra: {
+    max: 20,
+    connectionTimeoutMillis: 5000,
+    query_timeout: 5000,
+  },
 });
