@@ -62,25 +62,31 @@ export class InvoiceService {
     isDraft: boolean = false,
   ): Promise<Invoice> {
     try {
-      // First verify that client and company exist
+      // Load client with email
       const client = await this.clientRepository.findOne({
         where: { id: createInvoiceDto.clientId },
+        select: ['id', 'firstName', 'lastName', 'email'], // Make sure email is selected
       });
+
       if (!client) {
-        throw new BadRequestException({
-          message: `Client with ID ${createInvoiceDto.clientId} not found`,
-          statusCode: 400,
-        });
+        throw new NotFoundException(
+          `Client with ID ${createInvoiceDto.clientId} not found`,
+        );
       }
 
+      if (!client.email) {
+        this.logger.warn(`Client ${client.id} has no email address`);
+      }
+
+      // Load company
       const company = await this.companyRepository.findOne({
         where: { id: createInvoiceDto.companyId },
       });
+
       if (!company) {
-        throw new BadRequestException({
-          message: `Company with ID ${createInvoiceDto.companyId} not found`,
-          statusCode: 400,
-        });
+        throw new NotFoundException(
+          `Company with ID ${createInvoiceDto.companyId} not found`,
+        );
       }
 
       //veirfy that none of the items have a quantity of 0
@@ -95,9 +101,9 @@ export class InvoiceService {
       // const hash = this.generateUniqueHash();
 
       const invoice = this.invoiceRepository.create({
-        dueDate: createInvoiceDto.dueDate,
-        client: { id: createInvoiceDto.clientId },
-        company: { id: createInvoiceDto.companyId },
+        dueDate: new Date(createInvoiceDto.dueDate),
+        client: client, // Pass the full client object
+        company: company,
         invoiceNumber: `INV-${Date.now()}`,
         totalAmount: 0,
         status: isDraft ? InvoiceStatus.DRAFT : InvoiceStatus.UNPAID,
@@ -500,10 +506,19 @@ export class InvoiceService {
     if (
       invoice.status === InvoiceStatus.UNPAID &&
       invoice.dueDate &&
-      new Date() > invoice.dueDate
+      new Date() > new Date(invoice.dueDate)
     ) {
       invoice.status = InvoiceStatus.OVERDUE;
       await this.invoiceRepository.save(invoice);
+
+      // Format the date properly for the email
+      const dueDateObj = new Date(invoice.dueDate);
+      // const formattedDueDate = dueDateObj.toLocaleDateString('en-NG', {
+      //   weekday: 'long',
+      //   year: 'numeric',
+      //   month: 'long',
+      //   day: 'numeric',
+      // });
 
       // Send overdue notification
       await this.notificationService.createNotification(
@@ -513,24 +528,20 @@ export class InvoiceService {
         `Invoice ${invoice.invoiceNumber} for ${invoice.client.firstName} ${invoice.client.lastName} is now overdue`,
         {
           invoiceId: invoice.id,
-          dueDate: invoice.dueDate.toISOString(),
+          dueDate: dueDateObj.toISOString(),
           amount: invoice.totalAmount,
           clientId: invoice.client.id,
         },
       );
-      await this.emailService.sendOverdueInvoiceEmail(
-        invoice.client.email,
-        invoice.client.firstName,
-        invoice.invoiceNumber,
-        invoice.totalAmount,
-        invoice.dueDate.toLocaleDateString('en-NG', {
-          weekday: 'long',
-          year: 'numeric',
-          month: 'long',
-          day: 'numeric',
-        }),
-        invoice.paymentLink,
-      );
+
+      // await this.emailService.sendOverdueInvoiceEmail(
+      //   invoice.client.email,
+      //   invoice.client.firstName,
+      //   invoice.invoiceNumber,
+      //   invoice.totalAmount,
+      //   formattedDueDate,
+      //   invoice.paymentLink,
+      // );
     }
   }
 }

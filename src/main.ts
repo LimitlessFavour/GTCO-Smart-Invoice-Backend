@@ -3,11 +3,26 @@ import { AppModule } from './app.module';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import { Request, Response, NextFunction } from 'express';
 import * as yaml from 'js-yaml';
+import { Logger } from '@nestjs/common';
+import * as morgan from 'morgan';
+import { HttpExceptionFilter } from './health/http_exception_filter';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule, {
     logger: ['error', 'warn', 'debug', 'log', 'verbose'],
   });
+
+  // Add global exception filter for better error logging
+  app.useGlobalFilters(new HttpExceptionFilter());
+
+  // Enable CORS
+  app.enableCors({
+    origin: process.env.FRONTEND_URL || '*',
+    methods: 'GET,HEAD,PUT,PATCH,POST,DELETE,OPTIONS',
+    credentials: true,
+  });
+
+  app.use(morgan('combined'));
 
   // Swagger configuration
   const config = new DocumentBuilder()
@@ -19,6 +34,7 @@ async function bootstrap() {
       'Schema',
       'API Schema, Documentation Operations and OpenAPI Specifications',
     )
+    .addTag('Health', 'Health Check and System Status')
     .addTag(
       'Auth',
       'Authentication, Authorization, OAuth2 Integration and Token Management',
@@ -142,6 +158,12 @@ async function bootstrap() {
     }
   });
 
-  await app.listen(process.env.PORT ?? 3000);
+  // Log when application starts
+  const port = process.env.PORT || 3000;
+  await app.listen(port, '0.0.0.0', () => {
+    Logger.log(`Application is running on: http://localhost:${port}`);
+    Logger.log(`Swagger docs available at: http://localhost:${port}/api-docs`);
+    Logger.log(`Environment: ${process.env.NODE_ENV}`);
+  });
 }
 bootstrap();
