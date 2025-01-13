@@ -70,7 +70,15 @@ export class AuthService {
         }
       }
 
-      return this.generateTokens(data.user);
+      const tokens = await this.generateTokens(data.user);
+      return {
+        access_token: tokens.access_token,
+        refresh_token: tokens.refresh_token,
+        user: {
+          id: data.user.id,
+          email: data.user.email,
+        },
+      };
     } catch (error) {
       // Re-throw NestJS HTTP exceptions
       if (

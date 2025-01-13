@@ -33,6 +33,7 @@ import {
   OAuthCallbackResponseDto,
   AppleOAuthResponseDto,
   LoginResponseDto,
+  ErrorResponseDto,
 } from './dto/response.dto';
 import { ForgotPasswordDto } from './dto/forgot-password.dto';
 
@@ -46,18 +47,7 @@ export class AuthController {
     summary: 'Login user',
     description: 'Authenticate user with email and password',
   })
-  @ApiBody({
-    type: LoginDto,
-    description: 'User credentials',
-    examples: {
-      example1: {
-        value: {
-          email: 'user@example.com',
-          password: 'password123',
-        },
-      },
-    },
-  })
+  @ApiBody({ type: LoginDto })
   @ApiResponse({
     status: 200,
     description: 'Login successful',
@@ -65,11 +55,13 @@ export class AuthController {
   })
   @ApiResponse({
     status: 401,
-    description: 'Invalid credentials or email not verified',
+    description: 'Invalid credentials',
+    type: ErrorResponseDto,
   })
   @ApiResponse({
     status: 500,
     description: 'Internal server error',
+    type: ErrorResponseDto,
   })
   async login(@Body() loginDto: LoginDto) {
     return this.authService.login(loginDto);
