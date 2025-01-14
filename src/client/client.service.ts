@@ -120,8 +120,8 @@ export class ClientService {
     await this.activityService.create({
       type: ActivityType.CLIENT_UPDATED,
       entityType: 'CLIENT',
-      entityId: client.id,
-      companyId: 0,
+      entityId: client.id.toString(),
+      companyId: (0).toString(),
       metadata: {
         updatedFields: Object.keys(updateClientDto),
         email: client.email,

@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-unused-vars */
 import {
   Body,
   Controller,
@@ -26,6 +27,10 @@ import { OnboardUserDto } from '../user/dto/onboard-user.dto';
 import { SurveyResponseDto } from '../user/dto/survey-response.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
 import { UserService } from './user.service';
+import { UserResponseDto } from '../user/dto/user-response.dto';
+import { CompanyResponseDto } from '../user/dto/company-response.dto';
+import { OnboardingStatusResponseDto } from '../user/dto/onboarding-status-response.dto';
+import { SurveyResponseOutputDto } from '../user/dto/survey-response-output.dto';
 
 @ApiTags('User')
 @Controller('user')
@@ -38,28 +43,40 @@ export class UserController {
 
   @Get('profile')
   @ApiOperation({ summary: 'Get current user profile' })
-  @ApiResponse({ status: 200, description: 'Returns the user profile' })
-  async getProfile(@GetUser() user: any) {
+  @ApiResponse({
+    status: 200,
+    description: 'Returns the user profile',
+    type: UserResponseDto,
+  })
+  async getProfile(@GetUser() user: any): Promise<UserResponseDto> {
     return this.userService.findById(user.sub);
   }
 
   @Put('profile')
   @ApiOperation({ summary: 'Update user profile' })
-  @ApiResponse({ status: 200, description: 'Profile updated successfully' })
+  @ApiResponse({
+    status: 200,
+    description: 'Profile updated successfully',
+    type: UserResponseDto,
+  })
   async updateProfile(
     @GetUser() user: any,
     @Body() updateUserDto: UpdateUserDto,
-  ) {
+  ): Promise<UserResponseDto> {
     return this.userService.update(user.sub, updateUserDto);
   }
 
   @Post('onboard/user')
   @ApiOperation({ summary: 'Complete user onboarding' })
-  @ApiResponse({ status: 201, description: 'User onboarding completed' })
+  @ApiResponse({
+    status: 201,
+    description: 'User onboarding completed',
+    type: UserResponseDto,
+  })
   async onboardUser(
     @GetUser() user: any,
     @Body() onboardUserDto: OnboardUserDto,
-  ) {
+  ): Promise<UserResponseDto> {
     this.logger.debug(`User object from token: ${JSON.stringify(user)}`);
     if (!user?.sub) {
       this.logger.error(`Invalid user object: ${JSON.stringify(user)}`);
@@ -101,25 +118,39 @@ export class UserController {
 
   @Post('survey')
   @ApiOperation({ summary: 'Submit survey response' })
-  @ApiResponse({ status: 201, description: 'Survey response recorded' })
+  @ApiResponse({
+    status: 201,
+    description: 'Survey response recorded',
+    type: SurveyResponseOutputDto,
+  })
   async submitSurvey(
     @GetUser() user: any,
     @Body() surveyResponseDto: SurveyResponseDto,
-  ) {
+  ): Promise<SurveyResponseOutputDto> {
     return this.userService.submitSurvey(user.sub, surveyResponseDto);
   }
 
   @Get('company')
   @ApiOperation({ summary: 'Get user company details' })
-  @ApiResponse({ status: 200, description: 'Returns the company details' })
-  async getCompany(@GetUser() user: any) {
+  @ApiResponse({
+    status: 200,
+    description: 'Returns the company details',
+    type: CompanyResponseDto,
+  })
+  async getCompany(@GetUser() user: any): Promise<CompanyResponseDto> {
     return this.userService.getCompanyDetails(user.sub);
   }
 
   @Get('onboarding-status')
   @ApiOperation({ summary: 'Get user onboarding status' })
-  @ApiResponse({ status: 200, description: 'Returns the onboarding status' })
-  async getOnboardingStatus(@GetUser() user: any) {
+  @ApiResponse({
+    status: 200,
+    description: 'Returns the onboarding status',
+    type: OnboardingStatusResponseDto,
+  })
+  async getOnboardingStatus(
+    @GetUser() user: any,
+  ): Promise<OnboardingStatusResponseDto> {
     return this.userService.getOnboardingStatus(user.sub);
   }
 }

@@ -27,6 +27,7 @@ import { BulkClientUploadJob } from './client/entities/bulk-client-upload-job.en
 import { BulkClientUploadItem } from './client/entities/bulk-client-upload-item.entity';
 import { WebhookModule } from './webhooks/webhook.module';
 import { HealthModule } from './health/health.module';
+import { MockDataModule } from './mock-data/mock-data.module';
 
 @Module({
   imports: [
@@ -76,6 +77,7 @@ import { HealthModule } from './health/health.module';
     WebhookModule,
     AnalyticsModule,
     HealthModule,
+    MockDataModule,
   ],
   controllers: [AppController],
   providers: [AppService],

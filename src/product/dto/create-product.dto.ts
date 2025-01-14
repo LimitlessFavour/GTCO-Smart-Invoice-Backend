@@ -8,6 +8,7 @@ import {
 } from 'class-validator';
 import { ProductCategory } from '../enums/product-category.enum';
 import { VatCategory } from '../enums/vat-category.enum';
+import { Transform } from 'class-transformer';
 
 export class CreateProductDto {
   @ApiProperty({
@@ -55,8 +56,11 @@ export class CreateProductDto {
     description: 'VAT category',
     enum: VatCategory,
     example: VatCategory.FIVE_PERCENT,
+    type: 'number',
   })
   @IsEnum(VatCategory)
+  @IsNumber()
+  @Transform(({ value }) => Number(value)) // Add this line
   @IsNotEmpty()
   vatCategory: VatCategory;
 

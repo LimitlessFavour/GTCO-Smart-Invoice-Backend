@@ -29,6 +29,8 @@ import { RequestContext } from '../../common/interfaces/request-context.interfac
 import { FileInterceptor } from '@nestjs/platform-express';
 import { VatCategory } from '../enums/vat-category.enum';
 import { ProductCategory } from '../enums/product-category.enum';
+import { ProductResponseDto } from '../dto/responses/product-response.dto';
+import { ProductListResponseDto } from '../dto/responses/product-list-response.dto';
 
 @ApiTags('Product')
 @ApiBearerAuth()
@@ -41,7 +43,11 @@ export class ProductController {
 
   @Post()
   @ApiOperation({ summary: 'Create a new product' })
-  @ApiResponse({ status: 201, description: 'Product created successfully' })
+  @ApiResponse({
+    status: 201,
+    description: 'Product created successfully',
+    type: ProductResponseDto,
+  })
   @ApiConsumes('multipart/form-data')
   @ApiBody({
     schema: {
@@ -66,7 +72,7 @@ export class ProductController {
     @Body() createProductDto: CreateProductDto,
     @Req() req: Request & { user: RequestContext['user'] },
     @UploadedFile() image?: Express.Multer.File,
-  ) {
+  ): Promise<ProductResponseDto> {
     this.logger.debug(`Creating product: ${JSON.stringify(createProductDto)}`);
     return this.productService.create(
       createProductDto,
@@ -77,20 +83,31 @@ export class ProductController {
 
   @Get()
   @ApiOperation({ summary: 'Get all products' })
-  @ApiResponse({ status: 200, description: 'List of all products' })
-  async findAll(@Req() req: Request & { user: RequestContext['user'] }) {
+  @ApiResponse({
+    status: 200,
+    description: 'List of all products',
+    type: ProductListResponseDto,
+  })
+  async findAll(
+    @Req() req: Request & { user: RequestContext['user'] },
+  ): Promise<ProductListResponseDto> {
     this.logger.debug(
       `Fetching all products for company: ${req.user.company.id}`,
     );
-    return this.productService.findAll(req.user.company.id);
+    const products = await this.productService.findAll(req.user.company.id);
+    return { products };
   }
 
   @Get(':id')
   @ApiOperation({ summary: 'Get a product by ID' })
   @ApiParam({ name: 'id', description: 'Product ID' })
-  @ApiResponse({ status: 200, description: 'Product details' })
+  @ApiResponse({
+    status: 200,
+    description: 'Product details',
+    type: ProductResponseDto,
+  })
   @ApiResponse({ status: 404, description: 'Product not found' })
-  async findOne(@Param('id') id: string) {
+  async findOne(@Param('id') id: string): Promise<ProductResponseDto> {
     this.logger.debug(`Fetching product with ID: ${id}`);
     return this.productService.findOne(+id);
   }
@@ -98,7 +115,11 @@ export class ProductController {
   @Put(':id')
   @ApiOperation({ summary: 'Update a product' })
   @ApiParam({ name: 'id', description: 'Product ID' })
-  @ApiResponse({ status: 200, description: 'Product updated successfully' })
+  @ApiResponse({
+    status: 200,
+    description: 'Product updated successfully',
+    type: ProductResponseDto,
+  })
   @ApiConsumes('multipart/form-data')
   @ApiBody({
     schema: {
@@ -122,7 +143,7 @@ export class ProductController {
     @Param('id') id: string,
     @Body() updateProductDto: UpdateProductDto,
     @UploadedFile() image?: Express.Multer.File,
-  ) {
+  ): Promise<ProductResponseDto> {
     this.logger.debug(
       `Updating product ${id}: ${JSON.stringify(updateProductDto)}`,
     );
@@ -132,9 +153,15 @@ export class ProductController {
   @Delete(':id')
   @ApiOperation({ summary: 'Delete a product' })
   @ApiParam({ name: 'id', description: 'Product ID' })
-  @ApiResponse({ status: 200, description: 'Product deleted successfully' })
-  async remove(@Param('id') id: string) {
+  @ApiResponse({
+    status: 200,
+    description: 'Product deleted successfully',
+    type: ProductResponseDto,
+  })
+  async remove(@Param('id') id: string): Promise<ProductResponseDto> {
     this.logger.debug(`Deleting product with ID: ${id}`);
-    return this.productService.remove(+id);
+    const product = await this.productService.findOne(+id);
+    await this.productService.remove(+id);
+    return product;
   }
 }

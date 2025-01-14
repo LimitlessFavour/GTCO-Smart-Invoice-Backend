@@ -88,6 +88,7 @@ async function bootstrap() {
       'Webhooks',
       'Payment Gateway Integration, Webhook Handlers and External System Events',
     )
+    .addTag('mock-data', 'Endpoints for generating and managing mock data')
     .addBearerAuth()
     .build();
 

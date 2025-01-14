@@ -10,9 +10,9 @@ import {
   UseGuards,
   Req,
 } from '@nestjs/common';
-import { ClientService } from './client.service';
-import { CreateClientDto } from './dto/create-client.dto';
-import { UpdateClientDto } from './dto/update-client.dto';
+import { ClientService } from '../client.service';
+import { CreateClientDto } from '../dto/create-client.dto';
+import { UpdateClientDto } from '../dto/update-client.dto';
 import {
   ApiTags,
   ApiOperation,
@@ -21,11 +21,11 @@ import {
   ApiBody,
   ApiBearerAuth,
 } from '@nestjs/swagger';
-import { ClientDetailsDto } from './dto/client-details.dto';
-import { Client } from './client.entity';
+import { ClientDetailsDto } from '../dto/client-details.dto';
+import { Client } from '../client.entity';
 import { AuthGuard } from '@nestjs/passport';
-import { CompanyContextGuard } from '../common/guards/company-context.guard';
-import { RequestContext } from '../common/interfaces/request-context.interface';
+import { CompanyContextGuard } from '../../common/guards/company-context.guard';
+import { RequestContext } from '../../common/interfaces/request-context.interface';
 import { Request } from 'express';
 
 @ApiTags('Client')

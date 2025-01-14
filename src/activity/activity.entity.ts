@@ -41,11 +41,11 @@ export class Activity {
   @Column()
   entityType: string;
 
-  @Column()
-  entityId: number;
+  @Column('text')
+  entityId: string;
 
-  @Column()
-  companyId: number;
+  @Column('text')
+  companyId: string;
 
   @ManyToOne(() => Company)
   @JoinColumn({ name: 'companyId' })

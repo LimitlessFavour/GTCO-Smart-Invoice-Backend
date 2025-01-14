@@ -423,8 +423,8 @@ export class InvoiceService {
     await this.activityService.create({
       type: ActivityType.INVOICE_FINALIZED,
       entityType: 'INVOICE',
-      entityId: invoice.id,
-      companyId: invoice.company.id,
+      entityId: invoice.id.toString(),
+      companyId: invoice.company.id.toString(),
       metadata: {
         invoiceNumber: invoice.invoiceNumber,
         amount: invoice.totalAmount,

@@ -1,59 +1,5 @@
 import { ApiProperty } from '@nestjs/swagger';
 
-class UserDto {
-  @ApiProperty({
-    example: 'user-uuid',
-    description: 'Unique identifier of the user',
-  })
-  id: string;
-
-  @ApiProperty({
-    example: 'user@example.com',
-    description: 'Email address of the user',
-  })
-  email: string;
-}
-
-export class LoginResponseDto {
-  @ApiProperty({
-    example: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...',
-    description: 'JWT access token',
-  })
-  access_token: string;
-
-  @ApiProperty({
-    example: 'uuid-v4-refresh-token',
-    description: 'Refresh token for obtaining new access tokens',
-  })
-  refresh_token: string;
-
-  @ApiProperty({
-    type: UserDto,
-    description: 'User information',
-  })
-  user: UserDto;
-}
-
-export class SignupResponseDto {
-  @ApiProperty({
-    example: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...',
-    description: 'JWT access token',
-  })
-  access_token: string;
-
-  @ApiProperty({
-    type: UserDto,
-    description: 'User information',
-  })
-  user: UserDto;
-
-  @ApiProperty({
-    example: 'Please check your email for verification instructions',
-    description: 'Success message',
-  })
-  message: string;
-}
-
 class CompanyDto {
   @ApiProperty({
     example: 3,
@@ -108,6 +54,114 @@ class CompanyDto {
     description: 'Company last update date',
   })
   updatedAt: string;
+}
+
+class UserDto {
+  @ApiProperty({
+    example: '741fcee2-a4cb-4ce8-ae14-7dea32c32ea9',
+    description: 'Unique identifier of the user',
+  })
+  id: string;
+
+  @ApiProperty({
+    example: 'Tolulope',
+    description: 'First name of the user',
+  })
+  firstName: string;
+
+  @ApiProperty({
+    example: 'Oke',
+    description: 'Last name of the user',
+  })
+  lastName: string;
+
+  @ApiProperty({
+    example: 'oketolulope3@gmail.com',
+    description: 'Email address of the user',
+  })
+  email: string;
+
+  @ApiProperty({
+    example: '08091226233',
+    description: 'Phone number of the user',
+  })
+  phoneNumber: string;
+
+  @ApiProperty({
+    example: 'Nigeria',
+    description: 'Location of the user',
+  })
+  location: string;
+
+  @ApiProperty({
+    example: 2,
+    description: 'Current onboarding step',
+  })
+  onboardingStep: number;
+
+  @ApiProperty({
+    example: true,
+    description: 'Whether onboarding is completed',
+  })
+  onboardingCompleted: boolean;
+
+  @ApiProperty({
+    example: '2025-01-07T14:19:08.440Z',
+    description: 'User creation date',
+  })
+  createdAt: Date;
+
+  @ApiProperty({
+    example: '2025-01-13T05:46:34.690Z',
+    description: 'User last update date',
+  })
+  updatedAt: Date;
+
+  @ApiProperty({
+    type: CompanyDto,
+    description: 'Company information',
+  })
+  company: CompanyDto;
+}
+
+export class LoginResponseDto {
+  @ApiProperty({
+    example: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...',
+    description: 'JWT access token',
+  })
+  access_token: string;
+
+  @ApiProperty({
+    example: 'uuid-v4-refresh-token',
+    description: 'Refresh token for obtaining new access tokens',
+  })
+  refresh_token: string;
+
+  @ApiProperty({
+    type: UserDto,
+    description: 'Complete user information including company details',
+  })
+  user: UserDto;
+}
+
+export class SignupResponseDto {
+  @ApiProperty({
+    example: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...',
+    description: 'JWT access token',
+  })
+  access_token: string;
+
+  @ApiProperty({
+    type: UserDto,
+    description: 'User information',
+  })
+  user: UserDto;
+
+  @ApiProperty({
+    example: 'Please check your email for verification instructions',
+    description: 'Success message',
+  })
+  message: string;
 }
 
 export class ValidateTokenResponseDto {
