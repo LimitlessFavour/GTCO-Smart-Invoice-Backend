@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-unused-vars */
 import {
   Injectable,
   NotFoundException,
@@ -6,6 +7,7 @@ import {
   Logger,
   forwardRef,
   Inject,
+  HttpException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
@@ -423,8 +425,8 @@ export class InvoiceService {
     await this.activityService.create({
       type: ActivityType.INVOICE_FINALIZED,
       entityType: 'INVOICE',
-      entityId: invoice.id,
-      companyId: invoice.company.id,
+      entityId: invoice.id.toString(),
+      companyId: invoice.company.id.toString(),
       metadata: {
         invoiceNumber: invoice.invoiceNumber,
         amount: invoice.totalAmount,

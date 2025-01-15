@@ -6,8 +6,8 @@ import { Activity, ActivityType } from './activity.entity';
 interface CreateActivityDto {
   type: ActivityType;
   entityType: string;
-  entityId: number;
-  companyId: number;
+  entityId: string;
+  companyId: string;
   metadata?: Record<string, any>;
 }
 
@@ -44,7 +44,7 @@ export class ActivityService {
   }
 
   async findByEntityType(
-    companyId: number,
+    companyId: string,
     entityType: string,
   ): Promise<Activity[]> {
     return this.activityRepository.find({

@@ -23,7 +23,7 @@ export class ActivityController {
   @ApiOperation({ summary: 'Get activities by entity type' })
   @ApiResponse({ status: 200, type: [Activity] })
   async getActivitiesByType(
-    @Param('companyId') companyId: number,
+    @Param('companyId') companyId: string,
     @Param('entityType') entityType: string,
   ) {
     return this.activityService.findByEntityType(companyId, entityType);

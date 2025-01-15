@@ -110,7 +110,7 @@ export class ClientService {
   }
 
   async update(id: number, updateClientDto: UpdateClientDto): Promise<Client> {
-    const client = await this.findOne(id);
+    const client = await this.findOneEntity(id);
 
     // Update client
     Object.assign(client, updateClientDto);
@@ -120,8 +120,8 @@ export class ClientService {
     await this.activityService.create({
       type: ActivityType.CLIENT_UPDATED,
       entityType: 'CLIENT',
-      entityId: client.id,
-      companyId: 0,
+      entityId: client.id.toString(),
+      companyId: client.companyId.toString(),
       metadata: {
         updatedFields: Object.keys(updateClientDto),
         email: client.email,

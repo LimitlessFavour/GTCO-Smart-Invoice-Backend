@@ -1,5 +1,10 @@
 /* eslint-disable @typescript-eslint/no-unused-vars */
-import { Injectable, Logger } from '@nestjs/common';
+import {
+  Injectable,
+  Logger,
+  UnprocessableEntityException,
+  InternalServerErrorException,
+} from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import * as nodemailer from 'nodemailer';
 import {
@@ -99,8 +104,14 @@ export class EmailService {
     try {
       await this.transporter.sendMail(mailOptions);
     } catch (error) {
-      this.logger.error('Error sending invoice email:', error);
-      throw new Error('Failed to send invoice email');
+      if (error.message?.includes('recipient is suppressed')) {
+        throw new UnprocessableEntityException(
+          'Unable to send invoice email: recipient email address is blocked or invalid',
+        );
+      }
+      throw new InternalServerErrorException(
+        'Failed to send invoice email: ' + error.message,
+      );
     }
   }
 

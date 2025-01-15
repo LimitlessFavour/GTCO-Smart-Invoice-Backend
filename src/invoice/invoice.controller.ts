@@ -12,7 +12,15 @@ import { InvoiceService } from './invoice.service';
 import { CreateInvoiceDto } from './dto/create-invoice.dto';
 import { UpdateInvoiceDto } from './dto/update-invoice.dto';
 import { ApiTags, ApiOperation, ApiResponse, ApiParam } from '@nestjs/swagger';
-import { Invoice } from './invoice.entity';
+import {
+  CreateInvoiceResponseDto,
+  InvoiceListResponseDto,
+  MarkAsPaidResponseDto,
+  DraftInvoiceResponseDto,
+  FinalizeDraftResponseDto,
+  SingleInvoiceResponseDto,
+} from './dto/response.dto';
+import { ErrorResponseDto } from 'src/auth/dto/response.dto';
 
 @ApiTags('Invoice')
 @Controller('invoice')
@@ -24,11 +32,12 @@ export class InvoiceController {
   @ApiResponse({
     status: HttpStatus.CREATED,
     description: 'Invoice created successfully',
-    type: Invoice,
+    type: CreateInvoiceResponseDto,
   })
   @ApiResponse({
     status: HttpStatus.BAD_REQUEST,
     description: 'Invalid input data',
+    type: ErrorResponseDto,
   })
   @ApiResponse({
     status: HttpStatus.INTERNAL_SERVER_ERROR,
@@ -43,11 +52,12 @@ export class InvoiceController {
   @ApiResponse({
     status: HttpStatus.CREATED,
     description: 'Draft invoice created successfully',
-    type: Invoice,
+    type: DraftInvoiceResponseDto,
   })
   @ApiResponse({
     status: HttpStatus.BAD_REQUEST,
     description: 'Invalid input data',
+    type: ErrorResponseDto,
   })
   @ApiResponse({
     status: HttpStatus.INTERNAL_SERVER_ERROR,
@@ -63,11 +73,17 @@ export class InvoiceController {
   @ApiResponse({
     status: HttpStatus.OK,
     description: 'Invoice finalized successfully',
-    type: Invoice,
+    type: FinalizeDraftResponseDto,
   })
   @ApiResponse({
     status: HttpStatus.NOT_FOUND,
     description: 'Invoice not found',
+    type: ErrorResponseDto,
+  })
+  @ApiResponse({
+    status: HttpStatus.BAD_REQUEST,
+    description: 'Invoice is not in draft status',
+    type: ErrorResponseDto,
   })
   async finalizeDraft(@Param('id') id: string) {
     return this.invoiceService.finalizeDraft(+id);
@@ -78,11 +94,12 @@ export class InvoiceController {
   @ApiResponse({
     status: HttpStatus.OK,
     description: 'List of all invoices',
-    type: [Invoice],
+    type: InvoiceListResponseDto,
   })
   @ApiResponse({
     status: HttpStatus.INTERNAL_SERVER_ERROR,
     description: 'Internal server error',
+    type: ErrorResponseDto,
   })
   async findAll() {
     return this.invoiceService.findAll();
@@ -94,11 +111,12 @@ export class InvoiceController {
   @ApiResponse({
     status: HttpStatus.OK,
     description: 'Invoice details',
-    type: Invoice,
+    type: SingleInvoiceResponseDto,
   })
   @ApiResponse({
     status: HttpStatus.NOT_FOUND,
     description: 'Invoice not found',
+    type: ErrorResponseDto,
   })
   async findOne(@Param('id') id: string) {
     return this.invoiceService.findOne(+id);
@@ -110,15 +128,17 @@ export class InvoiceController {
   @ApiResponse({
     status: HttpStatus.OK,
     description: 'Invoice updated successfully',
-    type: Invoice,
+    type: SingleInvoiceResponseDto,
   })
   @ApiResponse({
     status: HttpStatus.NOT_FOUND,
     description: 'Invoice not found',
+    type: ErrorResponseDto,
   })
   @ApiResponse({
     status: HttpStatus.BAD_REQUEST,
-    description: 'Invalid input data',
+    description: 'Invalid input data or invoice not in draft status',
+    type: ErrorResponseDto,
   })
   async update(
     @Param('id') id: string,
@@ -144,7 +164,21 @@ export class InvoiceController {
 
   @Post(':id/mark-paid')
   @ApiOperation({ summary: 'Mark invoice as paid manually' })
-  @ApiResponse({ status: 200, type: Invoice })
+  @ApiResponse({
+    status: HttpStatus.OK,
+    description: 'Invoice marked as paid successfully',
+    type: MarkAsPaidResponseDto,
+  })
+  @ApiResponse({
+    status: HttpStatus.NOT_FOUND,
+    description: 'Invoice not found',
+    type: ErrorResponseDto,
+  })
+  @ApiResponse({
+    status: HttpStatus.BAD_REQUEST,
+    description: 'Invoice already paid',
+    type: ErrorResponseDto,
+  })
   async markAsPaid(@Param('id') id: string) {
     return this.invoiceService.markAsPaid(+id, false);
   }

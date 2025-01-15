@@ -1,6 +1,6 @@
 import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
-import { ClientController } from './client.controller';
+import { ClientController } from './controllers/client.controller';
 import { ClientService } from './client.service';
 import { Client } from './client.entity';
 import { BulkClientUploadJob } from './entities/bulk-client-upload-job.entity';

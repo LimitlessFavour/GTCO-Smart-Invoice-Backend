@@ -39,22 +39,29 @@ export class UserService {
 
   async findById(id: string): Promise<User> {
     try {
+      this.logger.debug(`Attempting to find user with ID: ${id}`);
       const user = await this.userRepository.findOne({
         where: { id },
         relations: ['company'],
       });
 
       if (!user) {
+        this.logger.error(`No user found with ID: ${id}`);
         throw new NotFoundException({
           message: 'User not found',
           statusCode: 404,
         });
       }
 
+      this.logger.debug(`Found user: ${JSON.stringify(user)}`);
       // Remove sensitive data
       delete user.password;
       return user;
     } catch (error) {
+      this.logger.error(
+        `Error finding user with ID ${id}: ${error.message}`,
+        error?.stack,
+      );
       if (error instanceof NotFoundException) {
         throw error;
       }
@@ -78,8 +85,8 @@ export class UserService {
       await this.activityService.create({
         type: ActivityType.USER_UPDATED,
         entityType: 'USER',
-        entityId: parseInt(id),
-        companyId: user.company.id,
+        entityId: id,
+        companyId: user.company.id.toString(),
         metadata: {
           updatedFields: Object.keys(updateUserDto),
         },
@@ -116,18 +123,6 @@ export class UserService {
       });
 
       await this.userRepository.save(user);
-
-      // Log activity
-      await this.activityService.create({
-        type: ActivityType.USER_ONBOARDED,
-        entityType: 'USER',
-        entityId: parseInt(id),
-        companyId: user.company.id,
-        metadata: {
-          step: user.onboardingStep,
-        },
-      });
-
       delete user.password;
       return user;
     } catch (error) {
@@ -234,11 +229,22 @@ export class UserService {
 
       // Log activity
       try {
+        // Log activity
+        await this.activityService.create({
+          type: ActivityType.USER_ONBOARDED,
+          entityType: 'USER',
+          entityId: user.id,
+          companyId: user.company.id.toString(),
+          metadata: {
+            step: user.onboardingStep,
+          },
+        });
+
         await this.activityService.create({
           type: ActivityType.COMPANY_CREATED,
           entityType: 'COMPANY',
-          entityId: company.id,
-          companyId: company.id,
+          entityId: company.id.toString(),
+          companyId: company.id.toString(),
           metadata: {
             name: company.name,
             description: company.description,
@@ -330,8 +336,8 @@ export class UserService {
             ? ActivityType.SURVEY_UPDATED
             : ActivityType.SURVEY_CREATED,
           entityType: 'SURVEY',
-          entityId: surveyResponse.id,
-          companyId: user.company.id,
+          entityId: surveyResponse.id.toString(),
+          companyId: user.company.id.toString(),
           metadata: {
             source: surveyResponse.source,
           },

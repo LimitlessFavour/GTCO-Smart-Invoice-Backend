@@ -96,9 +96,9 @@ export class SquadWebhookController {
           // Record activity
           await this.activityService.create({
             type: ActivityType.PAYMENT_RECEIVED,
-            entityId: invoice.id,
+            entityId: invoice.id.toString(),
             entityType: 'INVOICE',
-            companyId: invoice.company.id,
+            companyId: invoice.company.id.toString(),
             metadata: {
               amount: merchant_amount / 100,
               transactionRef: transaction_ref,

@@ -57,11 +57,11 @@ export class AuthService {
               statusCode: 401,
             });
           //TODO: Comment out or remove this case temporarily
-          case 'Email not confirmed':
-            throw new UnauthorizedException({
-              message: 'Please verify your email before logging in',
-              statusCode: 401,
-            });
+          // case 'Email not confirmed':
+          //   throw new UnauthorizedException({
+          //     message: 'Please verify your email before logging in',
+          //     statusCode: 401,
+          //   });
           default:
             throw new BadRequestException({
               message: error.message,
@@ -70,7 +70,45 @@ export class AuthService {
         }
       }
 
-      return this.generateTokens(data.user);
+      // Get full user details
+      const user = await this.userRepository.findOne({
+        where: { id: data.user.id },
+        relations: ['company'],
+      });
+      const tokens = await this.generateTokens(data.user);
+
+      if (!user) {
+        // throw new NotFoundException(`User not found`);
+        return {
+          access_token: tokens.access_token,
+          refresh_token: tokens.refresh_token,
+          user: {
+            id: user.id,
+            email: user.email,
+            onboardingStep: 0,
+            onboardingCompleted: false,
+          },
+        };
+      }
+
+      // Only modify the response structure
+      return {
+        access_token: tokens.access_token,
+        refresh_token: tokens.refresh_token,
+        user: {
+          id: user.id,
+          firstName: user.firstName,
+          lastName: user.lastName,
+          email: user.email,
+          phoneNumber: user.phoneNumber,
+          location: user.location,
+          onboardingStep: user.onboardingStep,
+          onboardingCompleted: user.onboardingCompleted,
+          createdAt: user.createdAt,
+          updatedAt: user.updatedAt,
+          company: user.company,
+        },
+      };
     } catch (error) {
       // Re-throw NestJS HTTP exceptions
       if (
