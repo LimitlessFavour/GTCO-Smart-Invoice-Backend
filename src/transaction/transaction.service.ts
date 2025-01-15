@@ -5,9 +5,12 @@ import { Transaction } from './transaction.entity';
 import { CreateTransactionDto } from './dto/create-transaction.dto';
 import { Company } from '../company/company.entity';
 import { PaymentType } from './transaction.entity';
+import { Logger } from '@nestjs/common';
 
 @Injectable()
 export class TransactionService {
+  private readonly logger = new Logger(TransactionService.name);
+
   constructor(
     @InjectRepository(Transaction)
     private transactionRepository: Repository<Transaction>,
@@ -18,7 +21,24 @@ export class TransactionService {
   async create(
     createTransactionDto: CreateTransactionDto,
   ): Promise<Transaction> {
-    const transaction = this.transactionRepository.create(createTransactionDto);
+    // Convert amount to number first, then format
+    const amount = Number(createTransactionDto.amount);
+
+    this.logger.debug('Creating transaction with data:', {
+      ...createTransactionDto,
+      amount,
+      originalAmount: createTransactionDto.amount,
+      amountType: typeof amount,
+    });
+
+    if (isNaN(amount)) {
+      throw new Error(`Invalid amount value: ${createTransactionDto.amount}`);
+    }
+
+    const transaction = this.transactionRepository.create({
+      ...createTransactionDto,
+      amount: Number(amount.toFixed(2)),
+    });
 
     // Update company revenue
     const company = await this.companyRepository.findOne({
@@ -29,23 +49,33 @@ export class TransactionService {
       throw new NotFoundException('Company not found');
     }
 
-    // Update total revenue
-    company.totalRevenue =
-      (company.totalRevenue || 0) + createTransactionDto.amount;
+    // Update total revenue with proper number handling
+    company.totalRevenue = Number(
+      (Number(company.totalRevenue || 0) + amount).toFixed(2),
+    );
 
     // Update withdrawable revenue only for gateway payments
     if (createTransactionDto.paymentType === PaymentType.GATEWAY) {
-      company.withdrawableRevenue =
-        (company.withdrawableRevenue || 0) + createTransactionDto.amount;
+      company.withdrawableRevenue = Number(
+        (Number(company.withdrawableRevenue || 0) + amount).toFixed(2),
+      );
     }
 
-    // Save both transaction and updated company revenue
-    await Promise.all([
-      this.companyRepository.save(company),
-      this.transactionRepository.save(transaction),
-    ]);
+    try {
+      const [savedTransaction] = await Promise.all([
+        this.transactionRepository.save(transaction),
+        this.companyRepository.save(company),
+      ]);
 
-    return transaction;
+      return savedTransaction;
+    } catch (error) {
+      this.logger.error('Error saving transaction:', {
+        error: error.message,
+        stack: error.stack,
+        transactionData: { ...createTransactionDto, amount },
+      });
+      throw error;
+    }
   }
 
   async findByInvoiceId(invoiceId: number): Promise<Transaction[]> {

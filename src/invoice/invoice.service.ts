@@ -210,40 +210,40 @@ export class InvoiceService {
           );
         }
 
-        // Only generate PDF and payment link if not a draft
+        // Only generate payment link and PDF if not a draft
         if (!isDraft) {
-          const [pdfPath, paymentLinkData] = await Promise.all([
-            this.pdfService.generateInvoicePdf(completeInvoice),
-            this.squadService.createPaymentLink(
-              completeInvoice.totalAmount,
-              completeInvoice.client.email,
-              completeInvoice.invoiceNumber,
-              completeInvoice.transactionRef,
-            ),
-          ]);
+          // First generate payment link
+          const paymentLinkData = await this.squadService.createPaymentLink(
+            completeInvoice.totalAmount,
+            completeInvoice.client.email,
+            completeInvoice.invoiceNumber,
+            completeInvoice.transactionRef,
+          );
 
-          // Store payment link and hash
+          // Update invoice with payment link
           completeInvoice.paymentLink = paymentLinkData.paymentUrl;
           completeInvoice.squadTransactionRef = paymentLinkData.squadRef;
           await this.invoiceRepository.save(completeInvoice);
 
-          // Send email
+          // Now generate PDF with updated invoice data
+          const pdfPath =
+            await this.pdfService.generateInvoicePdf(completeInvoice);
+
+          // Send email with both PDF and payment link
           await this.emailService.sendInvoiceEmail(
-            invoice.client.email,
-            invoice.client.firstName,
+            completeInvoice.client.email,
+            completeInvoice.client.firstName,
             pdfPath,
-            invoice.paymentLink,
-            invoice.invoiceNumber,
-            invoice.dueDate?.toLocaleDateString('en-NG', {
+            completeInvoice.paymentLink,
+            completeInvoice.invoiceNumber,
+            completeInvoice.dueDate?.toLocaleDateString('en-NG', {
               weekday: 'long',
               year: 'numeric',
               month: 'long',
               day: 'numeric',
             }),
           );
-        }
 
-        if (!isDraft) {
           await this.activityService.create({
             type: ActivityType.INVOICE_CREATED,
             entityType: 'INVOICE',
@@ -390,22 +390,22 @@ export class InvoiceService {
       });
     }
 
-    // Generate PDF and payment link
-    const [pdfPath, paymentData] = await Promise.all([
-      this.pdfService.generateInvoicePdf(invoice),
-      this.squadService.createPaymentLink(
-        invoice.totalAmount,
-        invoice.client.email,
-        invoice.invoiceNumber,
-        invoice.transactionRef,
-      ),
-    ]);
+    // First generate payment link
+    const paymentData = await this.squadService.createPaymentLink(
+      invoice.totalAmount,
+      invoice.client.email,
+      invoice.invoiceNumber,
+      invoice.transactionRef,
+    );
 
     // Update invoice status and payment link
     invoice.status = InvoiceStatus.UNPAID;
     invoice.paymentLink = paymentData.paymentUrl;
     invoice.squadTransactionRef = paymentData.squadRef;
     await this.invoiceRepository.save(invoice);
+
+    // Now generate PDF with updated invoice data
+    const pdfPath = await this.pdfService.generateInvoicePdf(invoice);
 
     // Send email
     await this.emailService.sendInvoiceEmail(
@@ -452,16 +452,32 @@ export class InvoiceService {
   }
 
   async findByTransactionRef(transactionRef: string): Promise<Invoice> {
+    this.logger.debug('Finding invoice by transaction ref:', {
+      transactionRef,
+    });
+
     const invoice = await this.invoiceRepository.findOne({
       where: [{ transactionRef }, { squadTransactionRef: transactionRef }],
-      relations: ['client'],
+      relations: ['client', 'company'], // Ensure both relations are loaded
     });
 
     if (!invoice) {
+      this.logger.error(
+        `Invoice not found for transaction ref: ${transactionRef}`,
+      );
       throw new NotFoundException(
         `Invoice with transaction reference ${transactionRef} not found`,
       );
     }
+
+    this.logger.debug('Found invoice by transaction ref:', {
+      invoiceId: invoice.id,
+      invoiceNumber: invoice.invoiceNumber,
+      hasClient: !!invoice.client,
+      hasCompany: !!invoice.company,
+      clientId: invoice.client?.id,
+      companyId: invoice.company?.id,
+    });
 
     return invoice;
   }
@@ -476,9 +492,16 @@ export class InvoiceService {
       throw new BadRequestException('Invoice is already paid');
     }
 
+    // Ensure amount is a number
+    const amount = Number(invoice.totalAmount);
+
+    if (isNaN(amount)) {
+      throw new Error(`Invalid invoice amount: ${invoice.totalAmount}`);
+    }
+
     // Create transaction record
     await this.transactionService.create({
-      amount: invoice.totalAmount,
+      amount, // Pass as number
       invoiceId: invoice.id,
       clientId: invoice.client.id,
       companyId: invoice.company.id,
