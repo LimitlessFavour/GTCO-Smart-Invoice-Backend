@@ -62,7 +62,8 @@ import { MockDataModule } from './mock-data/mock-data.module';
         process.env.NODE_ENV === 'production'
           ? { rejectUnauthorized: false }
           : false,
-      synchronize: process.env.NODE_ENV !== 'production',
+      // synchronize: process.env.NODE_ENV !== 'production',
+      synchronize: true,
       autoLoadEntities: true,
     }),
     ClientModule,

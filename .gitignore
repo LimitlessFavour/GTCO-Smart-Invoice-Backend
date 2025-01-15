@@ -65,3 +65,5 @@ invoices
 
 #plans and discussions
 plans/
+# .gitignore
+ormconfig.json
