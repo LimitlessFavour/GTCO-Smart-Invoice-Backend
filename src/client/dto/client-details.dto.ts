@@ -81,6 +81,12 @@ export class ClientDetailsDto {
   })
   totalInvoicesDrafted: number;
 
+  @ApiProperty({
+    description: 'ID of the company this client belongs to',
+    example: 1,
+  })
+  companyId: number;
+
   constructor(client: Client) {
     Object.assign(this, client);
   }

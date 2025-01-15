@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-unused-vars */
 import {
   Controller,
   Get,
@@ -27,6 +28,10 @@ import { AuthGuard } from '@nestjs/passport';
 import { CompanyContextGuard } from '../../common/guards/company-context.guard';
 import { RequestContext } from '../../common/interfaces/request-context.interface';
 import { Request } from 'express';
+import { CreateClientResponseDto } from '../dto/responses/create-client-response.dto';
+import { ClientListResponseDto } from '../dto/responses/client-list-response.dto';
+import { UpdateClientResponseDto } from '../dto/responses/update-client-response.dto';
+import { DeleteClientResponseDto } from '../dto/responses/delete-client-response.dto';
 
 @ApiTags('Client')
 @ApiBearerAuth()
@@ -44,7 +49,7 @@ export class ClientController {
   @ApiResponse({
     status: HttpStatus.CREATED,
     description: 'Client has been successfully created',
-    type: Client,
+    type: CreateClientResponseDto,
   })
   @ApiResponse({
     status: HttpStatus.BAD_REQUEST,
@@ -57,7 +62,7 @@ export class ClientController {
   async create(
     @Body() createClientDto: CreateClientDto,
     @Req() req: Request & { user: RequestContext['user'] },
-  ): Promise<Client> {
+  ): Promise<CreateClientResponseDto> {
     return this.clientService.create(createClientDto, req.user.company.id);
   }
 
@@ -69,7 +74,7 @@ export class ClientController {
   @ApiResponse({
     status: HttpStatus.OK,
     description: 'List of all clients retrieved successfully',
-    type: [Client],
+    type: ClientListResponseDto,
   })
   @ApiResponse({
     status: HttpStatus.UNAUTHORIZED,
@@ -77,8 +82,12 @@ export class ClientController {
   })
   async findAll(
     @Req() req: Request & { user: RequestContext['user'] },
-  ): Promise<Client[]> {
-    return this.clientService.findAll(req.user.company.id);
+  ): Promise<ClientListResponseDto> {
+    const clients = await this.clientService.findAll(req.user.company.id);
+    return {
+      data: clients,
+      total: clients.length,
+    };
   }
 
   @Get(':id')
@@ -125,7 +134,7 @@ export class ClientController {
   @ApiResponse({
     status: HttpStatus.OK,
     description: 'Client has been successfully updated',
-    type: Client,
+    type: UpdateClientResponseDto,
   })
   @ApiResponse({
     status: HttpStatus.NOT_FOUND,
@@ -142,8 +151,12 @@ export class ClientController {
   async update(
     @Param('id') id: string,
     @Body() updateClientDto: UpdateClientDto,
-  ): Promise<Client> {
-    return this.clientService.update(+id, updateClientDto);
+  ): Promise<UpdateClientResponseDto> {
+    const updatedClient = await this.clientService.update(+id, updateClientDto);
+    return {
+      client: updatedClient,
+      message: 'Client updated successfully',
+    };
   }
 
   @Delete(':id')
@@ -160,6 +173,7 @@ export class ClientController {
   @ApiResponse({
     status: HttpStatus.OK,
     description: 'Client has been successfully deleted',
+    type: DeleteClientResponseDto,
   })
   @ApiResponse({
     status: HttpStatus.NOT_FOUND,
@@ -173,7 +187,11 @@ export class ClientController {
     status: HttpStatus.CONFLICT,
     description: 'Cannot delete client with existing invoices',
   })
-  async remove(@Param('id') id: string): Promise<void> {
-    return this.clientService.remove(+id);
+  async remove(@Param('id') id: string): Promise<DeleteClientResponseDto> {
+    await this.clientService.remove(+id);
+    return {
+      message: 'Client deleted successfully',
+      statusCode: HttpStatus.OK,
+    };
   }
 }
