@@ -152,6 +152,12 @@ export class SignupResponseDto {
   access_token: string;
 
   @ApiProperty({
+    example: 'uuid-v4-refresh-token',
+    description: 'Refresh token for obtaining new access tokens',
+  })
+  refresh_token: string;
+
+  @ApiProperty({
     type: UserDto,
     description: 'User information',
   })

@@ -155,22 +155,20 @@ export class AuthService {
 
       // Create user record in our database
       const user = this.userRepository.create({
-        id: data.user.id, // Use Supabase user ID
+        id: data.user.id,
         email: data.user.email,
-        firstName: '', // These will be filled during onboarding
+        firstName: '',
         lastName: '',
       });
 
       await this.userRepository.save(user);
 
-      const payload = {
-        sub: data.user.id,
-        email: data.user.email,
-        roles: ['user'],
-      };
+      // Generate both access and refresh tokens
+      const tokens = await this.generateTokens(data.user);
 
       return {
-        access_token: this.jwtService.sign(payload),
+        access_token: tokens.access_token,
+        refresh_token: tokens.refresh_token,
         user: {
           id: data.user.id,
           email: data.user.email,
@@ -348,7 +346,8 @@ export class AuthService {
       roles: ['user'],
     };
 
-    const accessToken = this.jwtService.sign(payload, { expiresIn: '15m' });
+    const accessToken = this.jwtService.sign(payload);
+    // const accessToken = this.jwtService.sign(payload, { expiresIn: '15m' });
     const refreshToken = await this.createRefreshToken(user.id);
 
     return {
