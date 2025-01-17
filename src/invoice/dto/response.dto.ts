@@ -1,5 +1,7 @@
 import { ApiProperty } from '@nestjs/swagger';
 import { InvoiceStatus } from '../enums/invoice-status.enum';
+import { InvoiceStatsDto } from './invoice-stats.dto';
+import { Invoice } from '../invoice.entity';
 
 class InvoiceItemDto {
   @ApiProperty({
@@ -94,10 +96,10 @@ export class CreateInvoiceResponseDto {
 
 export class InvoiceListResponseDto {
   @ApiProperty({
-    type: [CreateInvoiceResponseDto],
+    type: [Invoice],
     description: 'List of invoices',
   })
-  data: CreateInvoiceResponseDto[];
+  data: Invoice[];
 
   @ApiProperty({
     example: 10,
@@ -116,6 +118,12 @@ export class InvoiceListResponseDto {
     description: 'Number of items per page',
   })
   limit: number;
+
+  @ApiProperty({
+    type: InvoiceStatsDto,
+    description: 'Invoice statistics',
+  })
+  stats: InvoiceStatsDto;
 }
 
 export class MarkAsPaidResponseDto extends CreateInvoiceResponseDto {

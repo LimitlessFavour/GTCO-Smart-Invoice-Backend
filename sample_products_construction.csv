@@ -1,0 +1,31 @@
+productName,description,category,price,defaultQuantity,vatCategory
+"Concrete Mixer","Portable electric concrete mixer",CONSTRUCTION_EQUIPMENT,499.99,1,FIVE_PERCENT
+"Safety Helmet","Industrial-grade safety helmet",SAFETY_GEAR,19.99,10,FIVE_PERCENT
+"Steel Shovel","Heavy-duty steel shovel",TOOLS,29.99,5,FIVE_PERCENT
+"Power Drill","Cordless power drill with battery",TOOLS,129.99,1,FIVE_PERCENT
+"Brick Trowel","Masonry trowel for bricklaying",TOOLS,14.99,5,FIVE_PERCENT
+"Safety Boots","Steel-toe safety boots",SAFETY_GEAR,59.99,5,FIVE_PERCENT
+"Wheelbarrow","Heavy-duty steel wheelbarrow",CONSTRUCTION_EQUIPMENT,89.99,1,FIVE_PERCENT
+"Measuring Tape","25-foot retractable measuring tape",TOOLS,9.99,10,FIVE_PERCENT
+"Hard Hat Light","Rechargeable LED light for hard hats",SAFETY_GEAR,24.99,5,FIVE_PERCENT
+"Circular Saw","Heavy-duty circular saw",TOOLS,149.99,1,FIVE_PERCENT
+"Safety Gloves","Cut-resistant safety gloves",SAFETY_GEAR,12.99,10,FIVE_PERCENT
+"Level Tool","48-inch aluminum level tool",TOOLS,39.99,2,FIVE_PERCENT
+"Rebar Cutter","Manual rebar cutting tool",TOOLS,79.99,1,FIVE_PERCENT
+"Construction Glasses","Anti-fog safety glasses",SAFETY_GEAR,14.99,5,FIVE_PERCENT
+"Jackhammer","Electric demolition jackhammer",CONSTRUCTION_EQUIPMENT,899.99,1,FIVE_PERCENT
+"Extension Ladder","24-foot fiberglass extension ladder",CONSTRUCTION_EQUIPMENT,199.99,1,FIVE_PERCENT
+"Paint Sprayer","High-pressure paint sprayer",TOOLS,149.99,1,FIVE_PERCENT
+"Safety Harness","Full-body safety harness",SAFETY_GEAR,89.99,1,FIVE_PERCENT
+"Concrete Vibrator","Portable concrete vibrator",CONSTRUCTION_EQUIPMENT,299.99,1,FIVE_PERCENT
+"Tool Belt","Heavy-duty leather tool belt",TOOLS,34.99,2,FIVE_PERCENT
+"Drywall Lift","Adjustable drywall lift",CONSTRUCTION_EQUIPMENT,249.99,1,FIVE_PERCENT
+"Angle Grinder","Heavy-duty angle grinder",TOOLS,79.99,1,FIVE_PERCENT
+"Safety Vest","High-visibility safety vest",SAFETY_GEAR,9.99,10,FIVE_PERCENT
+"Plumbing Wrench","Adjustable plumbing wrench",TOOLS,19.99,5,FIVE_PERCENT
+"Generator","Portable 5000W generator",CONSTRUCTION_EQUIPMENT,799.99,1,FIVE_PERCENT
+"Trowel Set","Set of 3 masonry trowels",TOOLS,29.99,2,FIVE_PERCENT
+"Concrete Saw","Gas-powered concrete saw",CONSTRUCTION_EQUIPMENT,499.99,1,FIVE_PERCENT
+"Safety Rope","50-foot safety rope",SAFETY_GEAR,49.99,1,FIVE_PERCENT
+"Drill Bits Set","Set of 50 drill bits",TOOLS,39.99,1,FIVE_PERCENT
+"Construction Apron","Heavy-duty construction apron",SAFETY_GEAR,24.99,2,FIVE_PERCENT

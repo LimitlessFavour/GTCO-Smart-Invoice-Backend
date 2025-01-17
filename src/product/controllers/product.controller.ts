@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-unused-vars */
 import {
   Controller,
   Get,
@@ -31,11 +32,12 @@ import { VatCategory } from '../enums/vat-category.enum';
 import { ProductCategory } from '../enums/product-category.enum';
 import { ProductResponseDto } from '../dto/responses/product-response.dto';
 import { ProductListResponseDto } from '../dto/responses/product-list-response.dto';
+import { AuthGuard } from '@nestjs/passport';
 
 @ApiTags('Product')
 @ApiBearerAuth()
 @Controller('product')
-@UseGuards(JwtAuthGuard)
+@UseGuards(JwtAuthGuard) // Use this instead of AuthGuard('jwt')
 export class ProductController {
   private readonly logger = new Logger(ProductController.name);
 

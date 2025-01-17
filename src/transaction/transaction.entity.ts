@@ -23,7 +23,14 @@ export class Transaction {
   id: number;
 
   @ApiProperty()
-  @Column('decimal', { precision: 10, scale: 2 })
+  @Column('decimal', {
+    precision: 10,
+    scale: 2,
+    transformer: {
+      to: (value: number): number => value,
+      from: (value: string): number => parseFloat(value),
+    },
+  })
   amount: number;
 
   @ApiProperty({ enum: PaymentType })

@@ -29,6 +29,9 @@ import { NotificationService } from 'src/notification/notification.service';
 import { NotificationType } from 'src/notification/notification.entity';
 import { ActivityService } from 'src/activity/activity.service';
 import { ActivityType } from 'src/activity/activity.entity';
+import { InvoiceStatsDto } from './dto/invoice-stats.dto';
+import { MoreThanOrEqual, Not } from 'typeorm';
+import { InvoiceListResponseDto } from './dto/response.dto';
 
 @Injectable()
 export class InvoiceService {
@@ -210,40 +213,40 @@ export class InvoiceService {
           );
         }
 
-        // Only generate PDF and payment link if not a draft
+        // Only generate payment link and PDF if not a draft
         if (!isDraft) {
-          const [pdfPath, paymentLinkData] = await Promise.all([
-            this.pdfService.generateInvoicePdf(completeInvoice),
-            this.squadService.createPaymentLink(
-              completeInvoice.totalAmount,
-              completeInvoice.client.email,
-              completeInvoice.invoiceNumber,
-              completeInvoice.transactionRef,
-            ),
-          ]);
+          // First generate payment link
+          const paymentLinkData = await this.squadService.createPaymentLink(
+            completeInvoice.totalAmount,
+            completeInvoice.client.email,
+            completeInvoice.invoiceNumber,
+            completeInvoice.transactionRef,
+          );
 
-          // Store payment link and hash
+          // Update invoice with payment link
           completeInvoice.paymentLink = paymentLinkData.paymentUrl;
           completeInvoice.squadTransactionRef = paymentLinkData.squadRef;
           await this.invoiceRepository.save(completeInvoice);
 
-          // Send email
+          // Now generate PDF with updated invoice data
+          const pdfPath =
+            await this.pdfService.generateInvoicePdf(completeInvoice);
+
+          // Send email with both PDF and payment link
           await this.emailService.sendInvoiceEmail(
-            invoice.client.email,
-            invoice.client.firstName,
+            completeInvoice.client.email,
+            completeInvoice.client.firstName,
             pdfPath,
-            invoice.paymentLink,
-            invoice.invoiceNumber,
-            invoice.dueDate?.toLocaleDateString('en-NG', {
+            completeInvoice.paymentLink,
+            completeInvoice.invoiceNumber,
+            completeInvoice.dueDate?.toLocaleDateString('en-NG', {
               weekday: 'long',
               year: 'numeric',
               month: 'long',
               day: 'numeric',
             }),
           );
-        }
 
-        if (!isDraft) {
           await this.activityService.create({
             type: ActivityType.INVOICE_CREATED,
             entityType: 'INVOICE',
@@ -287,9 +290,9 @@ export class InvoiceService {
     }
   }
 
-  async findAll(): Promise<Invoice[]> {
-    const invoices = await this.invoiceRepository.find({
-      relations: ['items', 'client', 'company'],
+  async findAll(): Promise<InvoiceListResponseDto> {
+    const [invoices, total] = await this.invoiceRepository.findAndCount({
+      relations: ['items', 'client', 'company', 'items.product'],
     });
 
     // Check each invoice for overdue status
@@ -299,13 +302,22 @@ export class InvoiceService {
       }),
     );
 
-    return invoices;
+    // Calculate stats
+    const stats = await this.calculateInvoiceStats();
+
+    return {
+      data: invoices,
+      total,
+      page: 1, // TODO: Add pagination parameters
+      limit: 10, // TODO: Add pagination parameters
+      stats,
+    };
   }
 
   async findOne(id: number): Promise<Invoice> {
     const invoice = await this.invoiceRepository.findOne({
       where: { id },
-      relations: ['items', 'client', 'company'],
+      relations: ['items', 'items.product', 'client', 'company'],
     });
 
     if (!invoice) {
@@ -390,22 +402,22 @@ export class InvoiceService {
       });
     }
 
-    // Generate PDF and payment link
-    const [pdfPath, paymentData] = await Promise.all([
-      this.pdfService.generateInvoicePdf(invoice),
-      this.squadService.createPaymentLink(
-        invoice.totalAmount,
-        invoice.client.email,
-        invoice.invoiceNumber,
-        invoice.transactionRef,
-      ),
-    ]);
+    // First generate payment link
+    const paymentData = await this.squadService.createPaymentLink(
+      invoice.totalAmount,
+      invoice.client.email,
+      invoice.invoiceNumber,
+      invoice.transactionRef,
+    );
 
     // Update invoice status and payment link
     invoice.status = InvoiceStatus.UNPAID;
     invoice.paymentLink = paymentData.paymentUrl;
     invoice.squadTransactionRef = paymentData.squadRef;
     await this.invoiceRepository.save(invoice);
+
+    // Now generate PDF with updated invoice data
+    const pdfPath = await this.pdfService.generateInvoicePdf(invoice);
 
     // Send email
     await this.emailService.sendInvoiceEmail(
@@ -452,16 +464,32 @@ export class InvoiceService {
   }
 
   async findByTransactionRef(transactionRef: string): Promise<Invoice> {
+    this.logger.debug('Finding invoice by transaction ref:', {
+      transactionRef,
+    });
+
     const invoice = await this.invoiceRepository.findOne({
       where: [{ transactionRef }, { squadTransactionRef: transactionRef }],
-      relations: ['client'],
+      relations: ['client', 'company'], // Ensure both relations are loaded
     });
 
     if (!invoice) {
+      this.logger.error(
+        `Invoice not found for transaction ref: ${transactionRef}`,
+      );
       throw new NotFoundException(
         `Invoice with transaction reference ${transactionRef} not found`,
       );
     }
+
+    this.logger.debug('Found invoice by transaction ref:', {
+      invoiceId: invoice.id,
+      invoiceNumber: invoice.invoiceNumber,
+      hasClient: !!invoice.client,
+      hasCompany: !!invoice.company,
+      clientId: invoice.client?.id,
+      companyId: invoice.company?.id,
+    });
 
     return invoice;
   }
@@ -476,9 +504,16 @@ export class InvoiceService {
       throw new BadRequestException('Invoice is already paid');
     }
 
+    // Ensure amount is a number
+    const amount = Number(invoice.totalAmount);
+
+    if (isNaN(amount)) {
+      throw new Error(`Invalid invoice amount: ${invoice.totalAmount}`);
+    }
+
     // Create transaction record
     await this.transactionService.create({
-      amount: invoice.totalAmount,
+      amount, // Pass as number
       invoiceId: invoice.id,
       clientId: invoice.client.id,
       companyId: invoice.company.id,
@@ -545,5 +580,71 @@ export class InvoiceService {
       //   invoice.paymentLink,
       // );
     }
+  }
+
+  private async calculateInvoiceStats(): Promise<InvoiceStatsDto> {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+
+    // Get overdue amount
+    const overdueInvoices = await this.invoiceRepository.find({
+      where: { status: InvoiceStatus.OVERDUE },
+    });
+    const overdue_amount = overdueInvoices.reduce(
+      (sum, invoice) => sum + Number(invoice.totalAmount),
+      0,
+    );
+
+    // Get drafted amount
+    const draftedInvoices = await this.invoiceRepository.find({
+      where: { status: InvoiceStatus.DRAFT },
+    });
+    const total_drafted_amount = draftedInvoices.reduce(
+      (sum, invoice) => sum + Number(invoice.totalAmount),
+      0,
+    );
+
+    // Get unpaid amount
+    const unpaidInvoices = await this.invoiceRepository.find({
+      where: { status: InvoiceStatus.UNPAID },
+    });
+    const unpaid_total = unpaidInvoices.reduce(
+      (sum, invoice) => sum + Number(invoice.totalAmount),
+      0,
+    );
+
+    // Calculate average payment time
+    const paidInvoices = await this.invoiceRepository.find({
+      where: { status: InvoiceStatus.PAID },
+      select: ['createdAt', 'paidAt'],
+    });
+
+    let average_paid_time = 0;
+    if (paidInvoices.length > 0) {
+      const totalDays = paidInvoices.reduce((sum, invoice) => {
+        const createdDate = new Date(invoice.createdAt);
+        const paidDate = new Date(invoice.paidAt);
+        const diffTime = Math.abs(paidDate.getTime() - createdDate.getTime());
+        const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+        return sum + diffDays;
+      }, 0);
+      average_paid_time = totalDays / paidInvoices.length;
+    }
+
+    // Get invoices sent today
+    const total_invoices_sent_today = await this.invoiceRepository.count({
+      where: {
+        createdAt: MoreThanOrEqual(today),
+        status: Not(InvoiceStatus.DRAFT),
+      },
+    });
+
+    return {
+      overdue_amount,
+      total_drafted_amount,
+      average_paid_time,
+      unpaid_total,
+      total_invoices_sent_today,
+    };
   }
 }
