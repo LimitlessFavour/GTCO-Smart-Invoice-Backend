@@ -29,6 +29,9 @@ import { NotificationService } from 'src/notification/notification.service';
 import { NotificationType } from 'src/notification/notification.entity';
 import { ActivityService } from 'src/activity/activity.service';
 import { ActivityType } from 'src/activity/activity.entity';
+import { InvoiceStatsDto } from './dto/invoice-stats.dto';
+import { MoreThanOrEqual, Not } from 'typeorm';
+import { InvoiceListResponseDto } from './dto/response.dto';
 
 @Injectable()
 export class InvoiceService {
@@ -287,9 +290,9 @@ export class InvoiceService {
     }
   }
 
-  async findAll(): Promise<Invoice[]> {
-    const invoices = await this.invoiceRepository.find({
-      relations: ['items', 'client', 'company'],
+  async findAll(): Promise<InvoiceListResponseDto> {
+    const [invoices, total] = await this.invoiceRepository.findAndCount({
+      relations: ['items', 'client', 'company', 'items.product'],
     });
 
     // Check each invoice for overdue status
@@ -299,13 +302,22 @@ export class InvoiceService {
       }),
     );
 
-    return invoices;
+    // Calculate stats
+    const stats = await this.calculateInvoiceStats();
+
+    return {
+      data: invoices,
+      total,
+      page: 1, // TODO: Add pagination parameters
+      limit: 10, // TODO: Add pagination parameters
+      stats,
+    };
   }
 
   async findOne(id: number): Promise<Invoice> {
     const invoice = await this.invoiceRepository.findOne({
       where: { id },
-      relations: ['items', 'client', 'company'],
+      relations: ['items', 'items.product', 'client', 'company'],
     });
 
     if (!invoice) {
@@ -568,5 +580,71 @@ export class InvoiceService {
       //   invoice.paymentLink,
       // );
     }
+  }
+
+  private async calculateInvoiceStats(): Promise<InvoiceStatsDto> {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+
+    // Get overdue amount
+    const overdueInvoices = await this.invoiceRepository.find({
+      where: { status: InvoiceStatus.OVERDUE },
+    });
+    const overdue_amount = overdueInvoices.reduce(
+      (sum, invoice) => sum + Number(invoice.totalAmount),
+      0,
+    );
+
+    // Get drafted amount
+    const draftedInvoices = await this.invoiceRepository.find({
+      where: { status: InvoiceStatus.DRAFT },
+    });
+    const total_drafted_amount = draftedInvoices.reduce(
+      (sum, invoice) => sum + Number(invoice.totalAmount),
+      0,
+    );
+
+    // Get unpaid amount
+    const unpaidInvoices = await this.invoiceRepository.find({
+      where: { status: InvoiceStatus.UNPAID },
+    });
+    const unpaid_total = unpaidInvoices.reduce(
+      (sum, invoice) => sum + Number(invoice.totalAmount),
+      0,
+    );
+
+    // Calculate average payment time
+    const paidInvoices = await this.invoiceRepository.find({
+      where: { status: InvoiceStatus.PAID },
+      select: ['createdAt', 'paidAt'],
+    });
+
+    let average_paid_time = 0;
+    if (paidInvoices.length > 0) {
+      const totalDays = paidInvoices.reduce((sum, invoice) => {
+        const createdDate = new Date(invoice.createdAt);
+        const paidDate = new Date(invoice.paidAt);
+        const diffTime = Math.abs(paidDate.getTime() - createdDate.getTime());
+        const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+        return sum + diffDays;
+      }, 0);
+      average_paid_time = totalDays / paidInvoices.length;
+    }
+
+    // Get invoices sent today
+    const total_invoices_sent_today = await this.invoiceRepository.count({
+      where: {
+        createdAt: MoreThanOrEqual(today),
+        status: Not(InvoiceStatus.DRAFT),
+      },
+    });
+
+    return {
+      overdue_amount,
+      total_drafted_amount,
+      average_paid_time,
+      unpaid_total,
+      total_invoices_sent_today,
+    };
   }
 }
