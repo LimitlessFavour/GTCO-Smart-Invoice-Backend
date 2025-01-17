@@ -51,9 +51,23 @@ export class InvoiceStats {
   drafted: number;
 }
 
+export class InvoicesTimeline {
+  @ApiProperty()
+  month: string;
+
+  @ApiProperty()
+  count: number;
+
+  @ApiProperty()
+  amount: number;
+}
+
 export class DashboardAnalyticsDto {
   @ApiProperty({ type: [PaymentsByMonth] })
   paymentsTimeline: PaymentsByMonth[];
+
+  @ApiProperty({ type: [InvoicesTimeline] })
+  invoicesTimeline: InvoicesTimeline[];
 
   @ApiProperty()
   invoiceStats: InvoiceStats;
