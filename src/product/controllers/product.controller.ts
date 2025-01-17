@@ -33,11 +33,12 @@ import { ProductCategory } from '../enums/product-category.enum';
 import { ProductResponseDto } from '../dto/responses/product-response.dto';
 import { ProductListResponseDto } from '../dto/responses/product-list-response.dto';
 import { AuthGuard } from '@nestjs/passport';
+import { CompanyContextGuard } from 'src/common/guards/company-context.guard';
 
 @ApiTags('Product')
 @ApiBearerAuth()
 @Controller('product')
-@UseGuards(JwtAuthGuard) // Use this instead of AuthGuard('jwt')
+@UseGuards(AuthGuard('jwt'), CompanyContextGuard)
 export class ProductController {
   private readonly logger = new Logger(ProductController.name);
 

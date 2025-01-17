@@ -7,6 +7,7 @@ import {
   Put,
   Delete,
   HttpStatus,
+  Req,
 } from '@nestjs/common';
 import { InvoiceService } from './invoice.service';
 import { CreateInvoiceDto } from './dto/create-invoice.dto';
@@ -21,6 +22,7 @@ import {
   SingleInvoiceResponseDto,
 } from './dto/response.dto';
 import { ErrorResponseDto } from 'src/auth/dto/response.dto';
+import { User } from 'src/user/user.entity';
 
 @ApiTags('Invoice')
 @Controller('invoice')
@@ -43,8 +45,9 @@ export class InvoiceController {
     status: HttpStatus.INTERNAL_SERVER_ERROR,
     description: 'Internal server error',
   })
-  async create(@Body() createInvoiceDto: CreateInvoiceDto) {
-    return this.invoiceService.create(createInvoiceDto, false);
+  async create(@Body() createInvoiceDto: CreateInvoiceDto, @Req() request) {
+    const user: User = request.user;
+    return this.invoiceService.create(createInvoiceDto, false, user);
   }
 
   @Post('draft')
@@ -63,8 +66,12 @@ export class InvoiceController {
     status: HttpStatus.INTERNAL_SERVER_ERROR,
     description: 'Internal server error',
   })
-  async createDraft(@Body() createInvoiceDto: CreateInvoiceDto) {
-    return this.invoiceService.create(createInvoiceDto, true);
+  async createDraft(
+    @Body() createInvoiceDto: CreateInvoiceDto,
+    @Req() request,
+  ) {
+    const user: User = request.user;
+    return this.invoiceService.create(createInvoiceDto, true, user);
   }
 
   @Post('draft/:id/finalize')
@@ -85,8 +92,9 @@ export class InvoiceController {
     description: 'Invoice is not in draft status',
     type: ErrorResponseDto,
   })
-  async finalizeDraft(@Param('id') id: string) {
-    return this.invoiceService.finalizeDraft(+id);
+  async finalizeDraft(@Param('id') id: string, @Req() request) {
+    const user: User = request.user;
+    return this.invoiceService.finalizeDraft(+id, user);
   }
 
   @Get()

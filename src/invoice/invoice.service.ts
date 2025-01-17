@@ -10,7 +10,7 @@ import {
   HttpException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { Repository, MoreThanOrEqual, Not } from 'typeorm';
 import { Invoice } from './invoice.entity';
 import { InvoiceItem } from './invoice-item.entity';
 import { CreateInvoiceDto } from './dto/create-invoice.dto';
@@ -30,8 +30,8 @@ import { NotificationType } from 'src/notification/notification.entity';
 import { ActivityService } from 'src/activity/activity.service';
 import { ActivityType } from 'src/activity/activity.entity';
 import { InvoiceStatsDto } from './dto/invoice-stats.dto';
-import { MoreThanOrEqual, Not } from 'typeorm';
 import { InvoiceListResponseDto } from './dto/response.dto';
+import { User } from 'src/user/user.entity';
 
 @Injectable()
 export class InvoiceService {
@@ -65,6 +65,7 @@ export class InvoiceService {
   async create(
     createInvoiceDto: CreateInvoiceDto,
     isDraft: boolean = false,
+    user: User,
   ): Promise<Invoice> {
     try {
       // Load client with email
@@ -94,7 +95,7 @@ export class InvoiceService {
         );
       }
 
-      //veirfy that none of the items have a quantity of 0
+      // Verify that none of the items have a quantity of 0
       if (createInvoiceDto.items.some((item) => item.quantity === 0)) {
         throw new BadRequestException({
           message: 'Quantity must be greater than 0',
@@ -196,7 +197,9 @@ export class InvoiceService {
       });
 
       savedInvoice.totalAmount = totalAmount;
-      savedInvoice.transactionRef = `INV-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+      savedInvoice.transactionRef = `INV-${Date.now()}-${Math.random()
+        .toString(36)
+        .substr(2, 9)}`;
 
       try {
         const finalInvoice = await this.invoiceRepository.save(savedInvoice);
@@ -392,7 +395,7 @@ export class InvoiceService {
   }
 
   // New method to finalize a draft invoice
-  async finalizeDraft(id: number): Promise<Invoice> {
+  async finalizeDraft(id: number, user: User): Promise<Invoice> {
     const invoice = await this.findOne(id);
 
     if (invoice.status !== InvoiceStatus.DRAFT) {
