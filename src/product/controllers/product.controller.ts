@@ -38,7 +38,7 @@ import { CompanyContextGuard } from 'src/common/guards/company-context.guard';
 @ApiTags('Product')
 @ApiBearerAuth()
 @Controller('product')
-@UseGuards(AuthGuard('jwt'), CompanyContextGuard)
+@UseGuards(JwtAuthGuard) // Changed from AuthGuard('jwt') to JwtAuthGuard
 export class ProductController {
   private readonly logger = new Logger(ProductController.name);
 

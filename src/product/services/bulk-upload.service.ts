@@ -108,6 +108,27 @@ export class BulkUploadService {
             continue;
           }
 
+          // Check for existing product
+          const existingProduct = await queryRunner.manager.findOne(Product, {
+            where: {
+              productName: row.productName,
+              companyId: job.companyId,
+            },
+          });
+
+          if (existingProduct) {
+            // Create successful upload record pointing to existing product
+            await this.createSuccessfulBulkUploadProduct(
+              queryRunner,
+              job,
+              row,
+              existingProduct,
+            );
+            job.successCount++;
+            continue;
+          }
+
+          // Continue with normal creation for new products
           const sku = await this.generateSKU(
             row.productName,
             job.companyId,

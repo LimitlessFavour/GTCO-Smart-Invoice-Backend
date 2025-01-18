@@ -36,7 +36,7 @@ import { DeleteClientResponseDto } from '../dto/responses/delete-client-response
 @ApiTags('Client')
 @ApiBearerAuth()
 @Controller('client')
-@UseGuards(AuthGuard('jwt'), CompanyContextGuard)
+@UseGuards(AuthGuard('jwt'))
 export class ClientController {
   constructor(private readonly clientService: ClientService) {}
 

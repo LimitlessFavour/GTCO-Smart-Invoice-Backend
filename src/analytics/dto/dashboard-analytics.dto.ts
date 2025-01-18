@@ -62,6 +62,26 @@ export class InvoicesTimeline {
   amount: number;
 }
 
+export class ActivityItem {
+  @ApiProperty()
+  id: number;
+
+  @ApiProperty()
+  activity: string;
+
+  @ApiProperty()
+  entityType: string;
+
+  @ApiProperty()
+  entityId: string;
+
+  @ApiProperty()
+  metadata: Record<string, any>;
+
+  @ApiProperty()
+  date: string;
+}
+
 export class DashboardAnalyticsDto {
   @ApiProperty({ type: [PaymentsByMonth] })
   paymentsTimeline: PaymentsByMonth[];
@@ -77,4 +97,7 @@ export class DashboardAnalyticsDto {
 
   @ApiProperty({ type: [TopProduct] })
   topSellingProducts: TopProduct[];
+
+  @ApiProperty({ type: [ActivityItem] })
+  activities: ActivityItem[];
 }

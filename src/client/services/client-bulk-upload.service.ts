@@ -107,6 +107,27 @@ export class ClientBulkUploadService {
             continue;
           }
 
+          // Check for existing client
+          const existingClient = await queryRunner.manager.findOne(Client, {
+            where: {
+              email: row.email,
+              companyId: job.companyId,
+            },
+          });
+
+          if (existingClient) {
+            // Create successful upload record pointing to existing client
+            await this.createSuccessfulBulkUploadItem(
+              queryRunner,
+              job,
+              row,
+              existingClient,
+            );
+            job.successCount++;
+            continue;
+          }
+
+          // Continue with normal creation for new clients
           const client = this.clientRepository.create({
             firstName: row.firstName,
             lastName: row.lastName,

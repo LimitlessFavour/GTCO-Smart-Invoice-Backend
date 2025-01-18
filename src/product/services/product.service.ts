@@ -11,6 +11,8 @@ import { Product } from '../entities/product.entity';
 import { CreateProductDto } from '../dto/create-product.dto';
 import { UpdateProductDto } from '../dto/update-product.dto';
 import { StorageService } from '../../storage/storage.service';
+import { ActivityType } from 'src/activity/activity.entity';
+import { ActivityService } from 'src/activity/activity.service';
 
 @Injectable()
 export class ProductService {
@@ -20,6 +22,7 @@ export class ProductService {
     @InjectRepository(Product)
     private productRepository: Repository<Product>,
     private readonly storageService: StorageService,
+    private readonly activityService: ActivityService,
   ) {}
 
   private generateSKU(productName: string, companyId: number): string {
@@ -33,36 +36,52 @@ export class ProductService {
     companyId: number,
     image?: Express.Multer.File,
   ): Promise<Product> {
-    let imageUrl: string | undefined;
+    // Generate SKU first
+    const timestamp = Date.now().toString().slice(-4);
+    const namePrefix = createProductDto.productName.slice(0, 3).toUpperCase();
+    const sku = `${namePrefix}-${companyId}-${timestamp}`;
 
-    if (image) {
-      try {
-        imageUrl = await this.storageService.uploadFile(
-          image,
-          'product-images',
-          `${companyId}`,
-        );
-      } catch (uploadError) {
-        this.logger.error(
-          `Failed to upload product image for company ${companyId}`,
-          uploadError?.stack || 'No stack trace',
-          'create',
-        );
-        throw new BadRequestException({
-          message: 'Failed to upload product image: ' + uploadError.message,
-          statusCode: 400,
-        });
-      }
-    }
-
-    const sku = this.generateSKU(createProductDto.productName, companyId);
+    // Create the product with SKU
     const product = this.productRepository.create({
       ...createProductDto,
-      sku,
       companyId,
-      image: imageUrl,
+      sku,
     });
-    return this.productRepository.save(product);
+
+    if (image) {
+      product.image = await this.storageService.uploadFile(
+        image,
+        'product-images',
+        `${companyId}`,
+      );
+    }
+
+    // Record activity and save product
+    try {
+      const savedProduct = await this.productRepository.save(product);
+      await this.activityService.create({
+        type: ActivityType.PRODUCT_CREATED,
+        entityType: 'PRODUCT',
+        entityId: savedProduct.id.toString(),
+        companyId: companyId.toString(),
+        metadata: {
+          name: savedProduct.productName,
+          sku: savedProduct.sku,
+        },
+      });
+
+      return savedProduct;
+    } catch (error) {
+      this.logger.error(
+        `Failed to create product: ${error.message}`,
+        error?.stack,
+        'create',
+      );
+      throw new BadRequestException({
+        message: 'Failed to create product: ' + error.message,
+        statusCode: 400,
+      });
+    }
   }
 
   async findAll(companyId: number): Promise<Product[]> {

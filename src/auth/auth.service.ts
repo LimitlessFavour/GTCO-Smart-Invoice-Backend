@@ -346,8 +346,9 @@ export class AuthService {
       roles: ['user'],
     };
 
-    const accessToken = this.jwtService.sign(payload);
-    // const accessToken = this.jwtService.sign(payload, { expiresIn: '15m' });
+    const accessToken = this.jwtService.sign(payload, {
+      expiresIn: '1yr',
+    });
     const refreshToken = await this.createRefreshToken(user.id);
 
     return {
