@@ -65,7 +65,6 @@ export class InvoiceService {
   async create(
     createInvoiceDto: CreateInvoiceDto,
     isDraft: boolean = false,
-    user: User,
   ): Promise<Invoice> {
     try {
       // Load client with email
@@ -185,7 +184,6 @@ export class InvoiceService {
           statusCode: 400,
         });
       }
-
       // Update invoice with total amount
       this.logger.debug('Calculating total amount:', {
         items: savedInvoice.items?.map((item) => ({
@@ -293,33 +291,35 @@ export class InvoiceService {
     }
   }
 
-  async findAll(): Promise<InvoiceListResponseDto> {
+  async findAll(companyId: number): Promise<InvoiceListResponseDto> {
     const [invoices, total] = await this.invoiceRepository.findAndCount({
+      where: { company: { id: companyId } },
       relations: ['items', 'client', 'company', 'items.product'],
+      order: { createdAt: 'DESC' },
     });
 
-    // Check each invoice for overdue status
     await Promise.all(
       invoices.map(async (invoice) => {
         await this.checkOverdueStatus(invoice);
       }),
     );
 
-    // Calculate stats
-    const stats = await this.calculateInvoiceStats();
+    const stats = await this.calculateInvoiceStats(companyId);
 
     return {
       data: invoices,
       total,
-      page: 1, // TODO: Add pagination parameters
-      limit: 10, // TODO: Add pagination parameters
+      page: 1,
+      limit: 10,
       stats,
     };
   }
 
   async findOne(id: number): Promise<Invoice> {
     const invoice = await this.invoiceRepository.findOne({
-      where: { id },
+      where: {
+        id,
+      },
       relations: ['items', 'items.product', 'client', 'company'],
     });
 
@@ -338,11 +338,7 @@ export class InvoiceService {
     const invoice = await this.findOne(id);
 
     if (invoice.status !== InvoiceStatus.DRAFT) {
-      throw new BadRequestException({
-        message: 'Only draft invoices can be updated',
-        statusCode: 400,
-        details: `Invoice ${invoice.invoiceNumber} is in ${invoice.status} status`,
-      });
+      throw new BadRequestException('Only draft invoices can be updated');
     }
 
     Object.assign(invoice, updateInvoiceDto);
@@ -356,7 +352,7 @@ export class InvoiceService {
     return invoice;
   }
 
-  async remove(id: number): Promise<void> {
+  async remove(id: number, companyId: number): Promise<void> {
     const invoice = await this.findOne(id);
     await this.invoiceRepository.remove(invoice);
   }
@@ -395,7 +391,7 @@ export class InvoiceService {
   }
 
   // New method to finalize a draft invoice
-  async finalizeDraft(id: number, user: User): Promise<Invoice> {
+  async finalizeDraft(id: number): Promise<Invoice> {
     const invoice = await this.findOne(id);
 
     if (invoice.status !== InvoiceStatus.DRAFT) {
@@ -553,12 +549,6 @@ export class InvoiceService {
 
       // Format the date properly for the email
       const dueDateObj = new Date(invoice.dueDate);
-      // const formattedDueDate = dueDateObj.toLocaleDateString('en-NG', {
-      //   weekday: 'long',
-      //   year: 'numeric',
-      //   month: 'long',
-      //   day: 'numeric',
-      // });
 
       // Send overdue notification
       await this.notificationService.createNotification(
@@ -585,31 +575,42 @@ export class InvoiceService {
     }
   }
 
-  private async calculateInvoiceStats(): Promise<InvoiceStatsDto> {
+  private async calculateInvoiceStats(
+    companyId: number,
+  ): Promise<InvoiceStatsDto> {
     const today = new Date();
     today.setHours(0, 0, 0, 0);
 
-    // Get overdue amount
+    // Get overdue invoices
     const overdueInvoices = await this.invoiceRepository.find({
-      where: { status: InvoiceStatus.OVERDUE },
+      where: {
+        status: InvoiceStatus.OVERDUE,
+        company: { id: companyId },
+      },
     });
     const overdue_amount = overdueInvoices.reduce(
       (sum, invoice) => sum + Number(invoice.totalAmount),
       0,
     );
 
-    // Get drafted amount
+    // Get drafted invoices
     const draftedInvoices = await this.invoiceRepository.find({
-      where: { status: InvoiceStatus.DRAFT },
+      where: {
+        status: InvoiceStatus.DRAFT,
+        company: { id: companyId },
+      },
     });
     const total_drafted_amount = draftedInvoices.reduce(
       (sum, invoice) => sum + Number(invoice.totalAmount),
       0,
     );
 
-    // Get unpaid amount
+    // Get unpaid invoices
     const unpaidInvoices = await this.invoiceRepository.find({
-      where: { status: InvoiceStatus.UNPAID },
+      where: {
+        status: InvoiceStatus.UNPAID,
+        company: { id: companyId },
+      },
     });
     const unpaid_total = unpaidInvoices.reduce(
       (sum, invoice) => sum + Number(invoice.totalAmount),
@@ -618,7 +619,10 @@ export class InvoiceService {
 
     // Calculate average payment time
     const paidInvoices = await this.invoiceRepository.find({
-      where: { status: InvoiceStatus.PAID },
+      where: {
+        status: InvoiceStatus.PAID,
+        company: { id: companyId },
+      },
       select: ['createdAt', 'paidAt'],
     });
 
@@ -639,6 +643,7 @@ export class InvoiceService {
       where: {
         createdAt: MoreThanOrEqual(today),
         status: Not(InvoiceStatus.DRAFT),
+        company: { id: companyId },
       },
     });
 
