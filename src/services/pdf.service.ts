@@ -131,7 +131,7 @@ export class PdfService {
     });
   }
 
-  private generateTable(doc: PDFKit.PDFDocument, invoice: Invoice) {
+  private generateTable(doc: typeof PDFDocument, invoice: Invoice) {
     // Table headers
     const tableTop = doc.y + 20;
     doc
