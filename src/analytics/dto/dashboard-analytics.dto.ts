@@ -51,9 +51,43 @@ export class InvoiceStats {
   drafted: number;
 }
 
+export class InvoicesTimeline {
+  @ApiProperty()
+  month: string;
+
+  @ApiProperty()
+  count: number;
+
+  @ApiProperty()
+  amount: number;
+}
+
+export class ActivityItem {
+  @ApiProperty()
+  id: number;
+
+  @ApiProperty()
+  activity: string;
+
+  @ApiProperty()
+  entityType: string;
+
+  @ApiProperty()
+  entityId: string;
+
+  @ApiProperty()
+  metadata: Record<string, any>;
+
+  @ApiProperty()
+  date: string;
+}
+
 export class DashboardAnalyticsDto {
   @ApiProperty({ type: [PaymentsByMonth] })
   paymentsTimeline: PaymentsByMonth[];
+
+  @ApiProperty({ type: [InvoicesTimeline] })
+  invoicesTimeline: InvoicesTimeline[];
 
   @ApiProperty()
   invoiceStats: InvoiceStats;
@@ -63,4 +97,7 @@ export class DashboardAnalyticsDto {
 
   @ApiProperty({ type: [TopProduct] })
   topSellingProducts: TopProduct[];
+
+  @ApiProperty({ type: [ActivityItem] })
+  activities: ActivityItem[];
 }

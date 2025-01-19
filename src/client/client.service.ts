@@ -31,11 +31,26 @@ export class ClientService {
     createClientDto: CreateClientDto,
     companyId: number,
   ): Promise<Client> {
+    // Check for existing identical client
+    const existingClient = await this.clientRepository.findOne({
+      where: {
+        email: createClientDto.email,
+        companyId: companyId,
+      },
+    });
+
+    if (existingClient) {
+      // Return existing client instead of creating duplicate
+      return existingClient;
+    }
+
     const client = this.clientRepository.create({
       ...createClientDto,
       companyId,
     });
 
+    console.log('client', client);
+    console.log('client id', client.id);
     // Send notification for new client
     await this.notificationService.createNotification(
       NotificationType.CLIENT_CREATED,
@@ -47,6 +62,18 @@ export class ClientService {
         email: client.email,
       },
     );
+
+    // Record activity
+    await this.activityService.create({
+      type: ActivityType.CLIENT_CREATED,
+      entityType: 'CLIENT',
+      entityId: client.firstName.toString(),
+      companyId: companyId.toString(),
+      metadata: {
+        email: client.email,
+        name: `${client.firstName} ${client.lastName}`,
+      },
+    });
 
     return this.clientRepository.save(client);
   }

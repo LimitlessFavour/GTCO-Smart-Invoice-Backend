@@ -9,11 +9,13 @@ import { BulkUploadController } from './controllers/bulk-upload.controller';
 import { BulkUploadService } from './services/bulk-upload.service';
 import { FileProcessingService } from './services/file-processing.service';
 import { StorageModule } from '../storage/storage.module';
+import { ActivityModule } from '../activity/activity.module';
 
 @Module({
   imports: [
     TypeOrmModule.forFeature([Product, BulkUploadJob, BulkUploadProduct]),
     StorageModule,
+    ActivityModule,
   ],
   controllers: [ProductController, BulkUploadController],
   providers: [ProductService, BulkUploadService, FileProcessingService],

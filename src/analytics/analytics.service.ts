@@ -1,24 +1,39 @@
 /* eslint-disable @typescript-eslint/no-unused-vars */
-import { Injectable } from '@nestjs/common';
+import {
+  Injectable,
+  InternalServerErrorException,
+  Logger,
+} from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, Between } from 'typeorm';
 import { Transaction } from '../transaction/transaction.entity';
 import { Invoice } from '../invoice/invoice.entity';
 import { Product } from '../product/entities/product.entity';
+import { Activity } from '../activity/activity.entity';
 import {
-  DashboardAnalyticsDto,
-  TimelineFilter,
-} from './dto/dashboard-analytics.dto';
-import { InvoiceStatus } from '../invoice/enums/invoice-status.enum';
-import {
+  endOfDay,
+  startOfDay,
   subDays,
   subWeeks,
   subMonths,
-  startOfMonth,
-  endOfMonth,
-  startOfDay,
-  endOfDay,
+  addDays,
+  addWeeks,
+  addMonths,
+  format,
+  differenceInDays,
 } from 'date-fns';
+import {
+  DashboardAnalyticsDto,
+  TimelineFilter,
+  InvoiceStats,
+  PaymentsByMonth,
+  TopClient,
+  TopProduct,
+  InvoicesTimeline,
+  ActivityItem,
+} from './dto/dashboard-analytics.dto';
+import { InvoiceStatus } from '../invoice/enums/invoice-status.enum';
+// import { ActivityItem } from './dto/activity-item.dto';
 
 @Injectable()
 export class AnalyticsService {
@@ -29,133 +44,271 @@ export class AnalyticsService {
     private invoiceRepository: Repository<Invoice>,
     @InjectRepository(Product)
     private productRepository: Repository<Product>,
+    @InjectRepository(Activity)
+    private activityRepository: Repository<Activity>,
+    private readonly logger: Logger,
   ) {}
-
-  async getDashboardAnalytics(
-    companyId: number,
-    timeline: TimelineFilter = TimelineFilter.LAST_MONTH,
-  ): Promise<DashboardAnalyticsDto> {
-    const [startDate, endDate] = this.getTimelineDates(timeline);
-
-    const [
-      paymentsTimeline,
-      invoiceStats,
-      topPayingClients,
-      topSellingProducts,
-    ] = await Promise.all([
-      this.getPaymentsTimeline(companyId, startDate, endDate),
-      this.getInvoiceStats(companyId, startDate, endDate),
-      this.getTopPayingClients(companyId),
-      this.getTopSellingProducts(companyId),
-    ]);
-
-    return {
-      paymentsTimeline,
-      invoiceStats,
-      topPayingClients,
-      topSellingProducts,
-    };
-  }
 
   private getTimelineDates(timeline: TimelineFilter): [Date, Date] {
     const now = new Date();
     const endDate = endOfDay(now);
+    let startDate: Date;
 
     switch (timeline) {
       case TimelineFilter.LAST_DAY:
-        return [startOfDay(now), endDate];
+        startDate = subDays(now, 1);
+        break;
       case TimelineFilter.LAST_WEEK:
-        return [subWeeks(now, 1), endDate];
+        startDate = subWeeks(now, 1);
+        break;
       case TimelineFilter.LAST_MONTH:
-        return [subMonths(now, 1), endDate];
+        startDate = subMonths(now, 1);
+        break;
       case TimelineFilter.LAST_3_MONTHS:
-        return [subMonths(now, 3), endDate];
+        startDate = subMonths(now, 3);
+        break;
       case TimelineFilter.LAST_6_MONTHS:
-        return [subMonths(now, 6), endDate];
+        startDate = subMonths(now, 6);
+        break;
       case TimelineFilter.LAST_9_MONTHS:
-        return [subMonths(now, 9), endDate];
+        startDate = subMonths(now, 9);
+        break;
       case TimelineFilter.LAST_12_MONTHS:
-        return [subMonths(now, 12), endDate];
+        startDate = subMonths(now, 12);
+        break;
       default:
-        return [subMonths(now, 1), endDate];
+        startDate = subMonths(now, 1);
     }
+
+    return [startOfDay(startDate), endDate];
   }
 
   private async getPaymentsTimeline(
     companyId: number,
     startDate: Date,
     endDate: Date,
-  ) {
-    return this.transactionRepository
+  ): Promise<PaymentsByMonth[]> {
+    const diffInDays = differenceInDays(endDate, startDate);
+    let timeFormat: string;
+
+    // Determine the time grouping based on the date range
+    if (diffInDays <= 7) {
+      timeFormat = 'day'; // Group by days for week or less
+    } else if (diffInDays <= 31) {
+      timeFormat = 'week'; // Group by weeks for month or less
+    } else {
+      timeFormat = 'month'; // Group by months for longer periods
+    }
+
+    const query = this.transactionRepository
       .createQueryBuilder('transaction')
-      .select("DATE_TRUNC('day', transaction.createdAt)", 'month')
-      .addSelect('SUM(transaction.amount)', 'amount')
-      .where('transaction.companyId = :companyId', { companyId })
+      .where('transaction.company.id = :companyId', { companyId })
       .andWhere('transaction.createdAt BETWEEN :startDate AND :endDate', {
         startDate,
         endDate,
-      })
-      .groupBy('month')
-      .orderBy('month', 'ASC')
-      .getRawMany();
+      });
+
+    switch (timeFormat) {
+      case 'day':
+        query
+          .select("DATE_TRUNC('day', transaction.createdAt)", 'month')
+          .addSelect('SUM(transaction.amount)', 'amount')
+          .groupBy("DATE_TRUNC('day', transaction.createdAt)");
+        break;
+      case 'week':
+        query
+          .select("DATE_TRUNC('week', transaction.createdAt)", 'month')
+          .addSelect('SUM(transaction.amount)', 'amount')
+          .groupBy("DATE_TRUNC('week', transaction.createdAt)");
+        break;
+      default:
+        query
+          .select("DATE_TRUNC('month', transaction.createdAt)", 'month')
+          .addSelect('SUM(transaction.amount)', 'amount')
+          .groupBy("DATE_TRUNC('month', transaction.createdAt)");
+    }
+
+    const results = await query.orderBy('month', 'ASC').getRawMany();
+
+    // Fill in missing periods with zero amounts
+    return this.fillMissingPeriods(results, startDate, endDate, timeFormat);
   }
 
-  private async getInvoiceStats(
-    companyId: number,
+  private fillMissingPeriods(
+    data: any[],
     startDate: Date,
     endDate: Date,
-  ) {
-    const invoices = await this.invoiceRepository
-      .createQueryBuilder('invoice')
-      .leftJoinAndSelect('invoice.company', 'company')
-      .where('company.id = :companyId', { companyId })
-      .andWhere('invoice.createdAt BETWEEN :startDate AND :endDate', {
-        startDate,
-        endDate,
-      })
-      .getMany();
+    timeFormat: string,
+  ): PaymentsByMonth[] {
+    const filledData: PaymentsByMonth[] = [];
+    let currentDate = startDate;
 
-    return {
-      totalInvoiced: invoices.reduce((sum, inv) => sum + inv.totalAmount, 0),
-      paid: invoices.filter((inv) => inv.status === InvoiceStatus.PAID).length,
-      unpaid: invoices.filter((inv) => inv.status === InvoiceStatus.UNPAID)
-        .length,
-      drafted: invoices.filter((inv) => inv.status === InvoiceStatus.DRAFT)
-        .length,
-    };
+    while (currentDate <= endDate) {
+      const existingData = data.find(
+        (d) =>
+          format(new Date(d.month), 'yyyy-MM-dd') ===
+          format(currentDate, 'yyyy-MM-dd'),
+      );
+
+      filledData.push({
+        month: format(currentDate, this.getDateFormat(timeFormat)),
+        amount: existingData ? Number(existingData.amount) : 0,
+      });
+
+      // Increment the date based on the time format
+      switch (timeFormat) {
+        case 'day':
+          currentDate = addDays(currentDate, 1);
+          break;
+        case 'week':
+          currentDate = addWeeks(currentDate, 1);
+          break;
+        default:
+          currentDate = addMonths(currentDate, 1);
+      }
+    }
+
+    return filledData;
   }
 
-  private async getTopPayingClients(companyId: number, limit: number = 4) {
+  private getDateFormat(timeFormat: string): string {
+    switch (timeFormat) {
+      case 'day':
+        return 'MMM dd';
+      case 'week':
+        return "'Week' w, MMM";
+      default:
+        return 'MMM yyyy';
+    }
+  }
+
+  private async getInvoiceStats(companyId: number): Promise<InvoiceStats> {
+    const invoices = await this.invoiceRepository.find({
+      where: { company: { id: companyId } },
+      relations: ['company'],
+    });
+
+    const stats = {
+      totalInvoiced: 0,
+      paid: 0,
+      unpaid: 0,
+      drafted: 0,
+    };
+
+    invoices.forEach((invoice) => {
+      const amount = Number(invoice.totalAmount);
+      stats.totalInvoiced += amount;
+
+      switch (invoice.status) {
+        case InvoiceStatus.PAID:
+          stats.paid += amount;
+          break;
+        case InvoiceStatus.UNPAID:
+        case InvoiceStatus.OVERDUE:
+          stats.unpaid += amount;
+          break;
+        case InvoiceStatus.DRAFT:
+          stats.drafted += amount;
+          break;
+      }
+    });
+
+    return stats;
+  }
+
+  private async getTopPayingClients(companyId: number) {
     return this.transactionRepository
       .createQueryBuilder('transaction')
       .select('client.firstName', 'firstName')
       .addSelect('client.lastName', 'lastName')
       .addSelect('SUM(transaction.amount)', 'totalPaid')
       .leftJoin('transaction.client', 'client')
-      .where('transaction.companyId = :companyId', { companyId })
+      .where('transaction.company.id = :companyId', { companyId })
       .groupBy('client.id')
       .addGroupBy('client.firstName')
       .addGroupBy('client.lastName')
-      .orderBy('totalPaid', 'DESC')
-      .limit(limit)
+      .orderBy('SUM(transaction.amount)', 'DESC')
+      .limit(5)
       .getRawMany();
   }
 
-  private async getTopSellingProducts(companyId: number, limit: number = 4) {
+  private async getTopSellingProducts(companyId: number) {
     return this.productRepository
       .createQueryBuilder('product')
-      .select('product.name', 'name')
+      .select('product.productName', 'name')
       .addSelect(
-        'SUM(invoice_item.quantity * invoice_item.unitPrice)',
+        'SUM(invoice_item.quantity * invoice_item.price)',
         'totalAmount',
       )
       .leftJoin('product.invoiceItems', 'invoice_item')
       .leftJoin('invoice_item.invoice', 'invoice')
       .where('product.companyId = :companyId', { companyId })
-      .andWhere('invoice.status = :status', { status: 'PAID' })
+      .andWhere('invoice.status = :status', { status: InvoiceStatus.PAID })
       .groupBy('product.id')
-      .orderBy('totalAmount', 'DESC')
-      .limit(limit)
+      .addGroupBy('product.productName')
+      .orderBy('SUM(invoice_item.quantity * invoice_item.price)', 'DESC')
+      .limit(4)
       .getRawMany();
+  }
+
+  private async getLast20Activities(
+    companyId: string,
+  ): Promise<ActivityItem[]> {
+    const activities = await this.activityRepository.find({
+      where: { companyId },
+      order: { createdAt: 'DESC' },
+      take: 20,
+      relations: ['company'],
+    });
+
+    return activities.map((activity) => ({
+      id: activity.id,
+      activity: activity.type,
+      entityType: activity.entityType,
+      entityId: activity.entityId,
+      metadata: activity.metadata,
+      date: format(activity.createdAt, 'MMM dd, yyyy HH:mm'),
+    }));
+  }
+
+  async getDashboardAnalytics(
+    companyId: number,
+    paymentsTimeline: TimelineFilter = TimelineFilter.LAST_MONTH,
+    invoicesTimeline: TimelineFilter = TimelineFilter.LAST_MONTH,
+  ): Promise<DashboardAnalyticsDto> {
+    try {
+      const [paymentsStartDate, paymentsEndDate] =
+        this.getTimelineDates(paymentsTimeline);
+      const [invoicesStartDate, invoicesEndDate] =
+        this.getTimelineDates(invoicesTimeline);
+
+      const [
+        paymentsData,
+        invoiceStats,
+        topPayingClients,
+        topSellingProducts,
+        activities,
+      ] = await Promise.all([
+        this.getPaymentsTimeline(companyId, paymentsStartDate, paymentsEndDate),
+        this.getInvoiceStats(companyId),
+        this.getTopPayingClients(companyId),
+        this.getTopSellingProducts(companyId),
+        this.getLast20Activities(String(companyId)),
+      ]);
+
+      return {
+        paymentsTimeline: paymentsData,
+        invoicesTimeline: [], // TODO: Implement getInvoicesTimeline
+        invoiceStats,
+        topPayingClients,
+        topSellingProducts,
+        activities,
+      };
+    } catch (error) {
+      this.logger.error('Error fetching dashboard analytics:', error);
+      throw new InternalServerErrorException(
+        'Failed to fetch dashboard analytics',
+      );
+    }
   }
 }

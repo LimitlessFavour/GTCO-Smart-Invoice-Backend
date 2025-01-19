@@ -12,6 +12,7 @@ import {
   Req,
   UseInterceptors,
   UploadedFile,
+  BadRequestException,
 } from '@nestjs/common';
 import { ProductService } from '../services/product.service';
 import { CreateProductDto } from '../dto/create-product.dto';
@@ -33,11 +34,12 @@ import { ProductCategory } from '../enums/product-category.enum';
 import { ProductResponseDto } from '../dto/responses/product-response.dto';
 import { ProductListResponseDto } from '../dto/responses/product-list-response.dto';
 import { AuthGuard } from '@nestjs/passport';
+import { CompanyContextGuard } from 'src/common/guards/company-context.guard';
 
 @ApiTags('Product')
 @ApiBearerAuth()
 @Controller('product')
-@UseGuards(JwtAuthGuard) // Use this instead of AuthGuard('jwt')
+@UseGuards(JwtAuthGuard)
 export class ProductController {
   private readonly logger = new Logger(ProductController.name);
 
@@ -96,6 +98,9 @@ export class ProductController {
     this.logger.debug(
       `Fetching all products for company: ${req.user.company.id}`,
     );
+    if (!req.user?.company?.id) {
+      throw new BadRequestException('Company ID is required');
+    }
     const products = await this.productService.findAll(req.user.company.id);
     return { products };
   }

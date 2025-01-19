@@ -43,23 +43,34 @@ export class EmailService {
       this.transporter = nodemailer.createTransport({
         host: this.configService.get('SMTP_HOST'),
         port: this.configService.get('SMTP_PORT'),
-        secure: false, // true for 465, false for other ports
+        secure: false,
         auth: {
           user: this.configService.get('SMTP_USER'),
           pass: this.configService.get('SMTP_PASSWORD'),
         },
-        // Add timeout settings
         tls: {
           rejectUnauthorized: false,
+          ciphers: 'SSLv3',
         },
-        pool: true, // use pooled connections
-        maxConnections: 5,
-        maxMessages: 100,
+        pool: true,
+        maxConnections: 3,
+        maxMessages: 50,
         rateDelta: 1000,
-        rateLimit: 5,
+        rateLimit: 3,
+        // Add reconnect settings
+        reconnectOnError: (err) => {
+          this.logger.error('SMTP Connection Error:', err);
+          return true;
+        },
       });
+
+      // Test the connection
+      await this.transporter.verify();
+      this.logger.log('SMTP Connection established successfully');
     } catch (error) {
       this.logger.error('Failed to initialize email transporter:', error);
+      // Attempt to reinitialize after 5 seconds
+      setTimeout(() => this.initializeTransporter(), 5000);
     }
   }
 

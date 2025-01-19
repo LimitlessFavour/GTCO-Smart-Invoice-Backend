@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-unused-vars */
 import {
   Controller,
   Get,
@@ -7,44 +8,57 @@ import {
   Put,
   Delete,
   HttpStatus,
+  Req,
+  UseGuards,
+  BadRequestException,
 } from '@nestjs/common';
 import { InvoiceService } from './invoice.service';
 import { CreateInvoiceDto } from './dto/create-invoice.dto';
 import { UpdateInvoiceDto } from './dto/update-invoice.dto';
-import { ApiTags, ApiOperation, ApiResponse, ApiParam } from '@nestjs/swagger';
 import {
-  CreateInvoiceResponseDto,
-  InvoiceListResponseDto,
-  MarkAsPaidResponseDto,
+  ApiTags,
+  ApiOperation,
+  ApiResponse,
+  ApiParam,
+  ApiBearerAuth,
+} from '@nestjs/swagger';
+import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
+import { RequestContext } from '../common/interfaces/request-context.interface';
+import { AuthGuard } from '@nestjs/passport';
+import { CompanyContextGuard } from 'src/common/guards/company-context.guard';
+import { GetUser } from '../auth/decorators/get-user.decorator';
+import { User } from '../user/user.entity';
+import {
   DraftInvoiceResponseDto,
   FinalizeDraftResponseDto,
-  SingleInvoiceResponseDto,
+  MarkAsPaidResponseDto,
 } from './dto/response.dto';
 import { ErrorResponseDto } from 'src/auth/dto/response.dto';
 
 @ApiTags('Invoice')
+@ApiBearerAuth()
 @Controller('invoice')
+@UseGuards(JwtAuthGuard)
 export class InvoiceController {
   constructor(private readonly invoiceService: InvoiceService) {}
 
   @Post()
   @ApiOperation({ summary: 'Create a new invoice' })
-  @ApiResponse({
-    status: HttpStatus.CREATED,
-    description: 'Invoice created successfully',
-    type: CreateInvoiceResponseDto,
-  })
-  @ApiResponse({
-    status: HttpStatus.BAD_REQUEST,
-    description: 'Invalid input data',
-    type: ErrorResponseDto,
-  })
-  @ApiResponse({
-    status: HttpStatus.INTERNAL_SERVER_ERROR,
-    description: 'Internal server error',
-  })
   async create(@Body() createInvoiceDto: CreateInvoiceDto) {
     return this.invoiceService.create(createInvoiceDto, false);
+  }
+
+  @Get()
+  @ApiOperation({ summary: 'Get all invoices for current company' })
+  @ApiResponse({
+    status: HttpStatus.OK,
+    description: 'List of all invoices',
+  })
+  async findAll(@Req() req: Request & { user: RequestContext['user'] }) {
+    if (!req.user?.company?.id) {
+      throw new BadRequestException('Company ID is required');
+    }
+    return this.invoiceService.findAll(req.user.company.id);
   }
 
   @Post('draft')
@@ -63,7 +77,11 @@ export class InvoiceController {
     status: HttpStatus.INTERNAL_SERVER_ERROR,
     description: 'Internal server error',
   })
-  async createDraft(@Body() createInvoiceDto: CreateInvoiceDto) {
+  async createDraft(
+    @Body() createInvoiceDto: CreateInvoiceDto,
+    @Req() request,
+  ) {
+    const user: User = request.user;
     return this.invoiceService.create(createInvoiceDto, true);
   }
 
@@ -85,69 +103,29 @@ export class InvoiceController {
     description: 'Invoice is not in draft status',
     type: ErrorResponseDto,
   })
-  async finalizeDraft(@Param('id') id: string) {
+  async finalizeDraft(@Param('id') id: string, @Req() request) {
+    const user: User = request.user;
     return this.invoiceService.finalizeDraft(+id);
-  }
-
-  @Get()
-  @ApiOperation({ summary: 'Get all invoices' })
-  @ApiResponse({
-    status: HttpStatus.OK,
-    description: 'List of all invoices',
-    type: InvoiceListResponseDto,
-  })
-  @ApiResponse({
-    status: HttpStatus.INTERNAL_SERVER_ERROR,
-    description: 'Internal server error',
-    type: ErrorResponseDto,
-  })
-  async findAll() {
-    return this.invoiceService.findAll();
   }
 
   @Get(':id')
   @ApiOperation({ summary: 'Get an invoice by ID' })
-  @ApiParam({ name: 'id', description: 'Invoice ID', type: 'number' })
-  @ApiResponse({
-    status: HttpStatus.OK,
-    description: 'Invoice details',
-    type: SingleInvoiceResponseDto,
-  })
-  @ApiResponse({
-    status: HttpStatus.NOT_FOUND,
-    description: 'Invoice not found',
-    type: ErrorResponseDto,
-  })
   async findOne(@Param('id') id: string) {
     return this.invoiceService.findOne(+id);
   }
 
   @Put(':id')
   @ApiOperation({ summary: 'Update an invoice' })
-  @ApiParam({ name: 'id', description: 'Invoice ID', type: 'number' })
-  @ApiResponse({
-    status: HttpStatus.OK,
-    description: 'Invoice updated successfully',
-    type: SingleInvoiceResponseDto,
-  })
-  @ApiResponse({
-    status: HttpStatus.NOT_FOUND,
-    description: 'Invoice not found',
-    type: ErrorResponseDto,
-  })
-  @ApiResponse({
-    status: HttpStatus.BAD_REQUEST,
-    description: 'Invalid input data or invoice not in draft status',
-    type: ErrorResponseDto,
-  })
   async update(
     @Param('id') id: string,
     @Body() updateInvoiceDto: UpdateInvoiceDto,
+    @GetUser() user: User,
   ) {
     return this.invoiceService.update(+id, updateInvoiceDto);
   }
 
   @Delete(':id')
+  @ApiOperation({ summary: 'Delete an invoice' })
   @ApiOperation({ summary: 'Delete an invoice' })
   @ApiParam({ name: 'id', description: 'Invoice ID', type: 'number' })
   @ApiResponse({
@@ -158,8 +136,8 @@ export class InvoiceController {
     status: HttpStatus.NOT_FOUND,
     description: 'Invoice not found',
   })
-  async remove(@Param('id') id: string) {
-    return this.invoiceService.remove(+id);
+  async remove(@Param('id') id: string, @GetUser() user: User) {
+    return this.invoiceService.remove(+id, user.company.id);
   }
 
   @Post(':id/mark-paid')

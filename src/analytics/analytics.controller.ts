@@ -1,62 +1,62 @@
 /* eslint-disable @typescript-eslint/no-unused-vars */
-import { Controller, Get, Param, Query, UseGuards } from '@nestjs/common';
+import { Controller, Get, Query, UseGuards, Req } from '@nestjs/common';
 import {
   ApiTags,
   ApiOperation,
   ApiResponse,
   ApiBearerAuth,
-  ApiParam,
   ApiQuery,
 } from '@nestjs/swagger';
-// import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
-import { AnalyticsService } from './analytics.service';
+import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import {
   DashboardAnalyticsDto,
   TimelineFilter,
 } from './dto/dashboard-analytics.dto';
+import { Request } from 'express';
+import { UserService } from '../user/user.service';
+import { RequestContext } from 'src/common/interfaces/request-context.interface';
+import { AnalyticsService } from './analytics.service';
 
 @ApiTags('Analytics')
 @ApiBearerAuth()
-// @UseGuards(JwtAuthGuard)
+@UseGuards(JwtAuthGuard)
 @Controller('analytics')
 export class AnalyticsController {
-  constructor(private readonly analyticsService: AnalyticsService) {}
+  constructor(
+    private readonly analyticsService: AnalyticsService,
+    private readonly userService: UserService,
+  ) {}
 
-  @Get('dashboard/:companyId')
+  @Get('dashboard')
   @ApiOperation({
     summary: 'Get dashboard analytics',
-    description:
-      'Retrieves comprehensive dashboard analytics including payment timeline, invoice statistics, top paying clients, and top selling products',
-  })
-  @ApiParam({
-    name: 'companyId',
-    type: 'number',
-    description: 'ID of the company to get analytics for',
-    required: true,
+    description: 'Retrieves comprehensive dashboard analytics',
   })
   @ApiQuery({
-    name: 'timeline',
+    name: 'paymentsTimeline',
     enum: TimelineFilter,
     required: false,
-    description: 'Time period for analytics data (defaults to LAST_MONTH)',
+    description: 'Time period for payments data',
   })
-  @ApiResponse({
-    status: 200,
-    description: 'Dashboard analytics data retrieved successfully',
-    type: DashboardAnalyticsDto,
-  })
-  @ApiResponse({
-    status: 401,
-    description: 'Unauthorized - JWT token is missing or invalid',
-  })
-  @ApiResponse({
-    status: 403,
-    description: 'Forbidden - User does not have access to this company',
+  @ApiQuery({
+    name: 'invoicesTimeline',
+    enum: TimelineFilter,
+    required: false,
+    description: 'Time period for invoices data',
   })
   async getDashboardAnalytics(
-    @Param('companyId') companyId: number,
-    @Query('timeline') timeline?: TimelineFilter,
+    // @Req() request: Request,
+    @Req() request: Request & { user: RequestContext['user'] },
+    @Query('paymentsTimeline') paymentsTimeline?: TimelineFilter,
+    @Query('invoicesTimeline') invoicesTimeline?: TimelineFilter,
   ): Promise<DashboardAnalyticsDto> {
-    return this.analyticsService.getDashboardAnalytics(companyId, timeline);
+    const user = request.user as any;
+    const company = await this.userService.getCompanyDetails(user.sub);
+
+    return this.analyticsService.getDashboardAnalytics(
+      company.id,
+      paymentsTimeline,
+      invoicesTimeline,
+    );
   }
 }

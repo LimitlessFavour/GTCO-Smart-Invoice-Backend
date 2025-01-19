@@ -26,7 +26,6 @@ export class Invoice {
   @ApiProperty({ description: 'Due date of the invoice' })
   @Column()
   dueDate: Date;
-
   @ApiProperty({
     description: 'Current status of the invoice',
     enum: InvoiceStatus,
