@@ -1,4 +1,5 @@
 import { ApiProperty } from '@nestjs/swagger';
+import { Transaction } from '../../transaction/transaction.entity';
 
 export enum TimelineFilter {
   LAST_DAY = 'LAST_DAY',
@@ -83,8 +84,8 @@ export class ActivityItem {
 }
 
 export class DashboardAnalyticsDto {
-  @ApiProperty({ type: [PaymentsByMonth] })
-  paymentsTimeline: PaymentsByMonth[];
+  @ApiProperty({ type: [Transaction] })
+  paymentsTimeline: Transaction[];
 
   @ApiProperty({ type: [InvoicesTimeline] })
   invoicesTimeline: InvoicesTimeline[];

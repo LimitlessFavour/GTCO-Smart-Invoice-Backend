@@ -87,51 +87,20 @@ export class AnalyticsService {
     companyId: number,
     startDate: Date,
     endDate: Date,
-  ): Promise<PaymentsByMonth[]> {
-    const diffInDays = differenceInDays(endDate, startDate);
-    let timeFormat: string;
-
-    // Determine the time grouping based on the date range
-    if (diffInDays <= 7) {
-      timeFormat = 'day'; // Group by days for week or less
-    } else if (diffInDays <= 31) {
-      timeFormat = 'week'; // Group by weeks for month or less
-    } else {
-      timeFormat = 'month'; // Group by months for longer periods
-    }
-
-    const query = this.transactionRepository
-      .createQueryBuilder('transaction')
-      .where('transaction.company.id = :companyId', { companyId })
-      .andWhere('transaction.createdAt BETWEEN :startDate AND :endDate', {
-        startDate,
-        endDate,
-      });
-
-    switch (timeFormat) {
-      case 'day':
-        query
-          .select("DATE_TRUNC('day', transaction.createdAt)", 'month')
-          .addSelect('SUM(transaction.amount)', 'amount')
-          .groupBy("DATE_TRUNC('day', transaction.createdAt)");
-        break;
-      case 'week':
-        query
-          .select("DATE_TRUNC('week', transaction.createdAt)", 'month')
-          .addSelect('SUM(transaction.amount)', 'amount')
-          .groupBy("DATE_TRUNC('week', transaction.createdAt)");
-        break;
-      default:
-        query
-          .select("DATE_TRUNC('month', transaction.createdAt)", 'month')
-          .addSelect('SUM(transaction.amount)', 'amount')
-          .groupBy("DATE_TRUNC('month', transaction.createdAt)");
-    }
-
-    const results = await query.orderBy('month', 'ASC').getRawMany();
-
-    // Fill in missing periods with zero amounts
-    return this.fillMissingPeriods(results, startDate, endDate, timeFormat);
+  ): Promise<Transaction[]> {
+    return (
+      this.transactionRepository
+        .createQueryBuilder('transaction')
+        .where('transaction.company.id = :companyId', { companyId })
+        .andWhere('transaction.createdAt BETWEEN :startDate AND :endDate', {
+          startDate,
+          endDate,
+        })
+        // .leftJoinAndSelect('transaction.client', 'client')
+        // .leftJoinAndSelect('transaction.invoice', 'invoice')
+        .orderBy('transaction.createdAt', 'DESC')
+        .getMany()
+    );
   }
 
   private fillMissingPeriods(

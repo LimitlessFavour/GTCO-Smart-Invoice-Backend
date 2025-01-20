@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-unused-vars */
 import { Injectable, Logger } from '@nestjs/common';
 import * as PDFDocument from 'pdfkit';
 import axios from 'axios';
@@ -40,15 +41,16 @@ export class PdfService {
     const stream = fs.createWriteStream(filePath);
     doc.pipe(stream);
 
-    // Load company logo if available
-    if (invoice.company?.logo) {
+    // Load company logo if available and valid
+    if (invoice.company?.logo && this.isValidUrl(invoice.company.logo)) {
       try {
         const response = await axios.get(invoice.company.logo, {
           responseType: 'arraybuffer',
         });
         doc.image(response.data, 50, 50, { width: 100 });
       } catch (error) {
-        this.logger.error('Failed to load company logo', error);
+        this.logger.warn(`Failed to load company logo: ${error.message}`);
+        // Continue without the logo
       }
     }
 
@@ -178,5 +180,15 @@ export class PdfService {
       .moveTo(50, tableTop + 15)
       .lineTo(550, tableTop + 15)
       .stroke();
+  }
+
+  // Add this helper method to validate URLs
+  private isValidUrl(urlString: string): boolean {
+    try {
+      new URL(urlString);
+      return true;
+    } catch (err) {
+      return false;
+    }
   }
 }
